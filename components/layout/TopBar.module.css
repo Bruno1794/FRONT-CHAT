@@ -1,0 +1,49 @@
+.topbar {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(216, 218, 221, 0.72);
+  padding: 20px 22px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+}
+
+.topbar h1 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 1.45rem;
+}
+
+.topbar p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+}
+
+.user {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--outline);
+  border-radius: 999px;
+  padding: 9px 12px;
+  background: #ffffff;
+  color: var(--text-main);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+}

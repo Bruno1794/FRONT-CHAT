@@ -1,0 +1,10 @@
+:export {
+  primary: #075e54;
+  primaryDark: #054d44;
+  surface: #f7f9fc;
+  outline: #d8dadd;
+  textMain: #1a1a1a;
+  textMuted: #666666;
+  radiusLg: 16px;
+  radiusMd: 8px;
+}

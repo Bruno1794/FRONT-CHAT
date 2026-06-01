@@ -1,0 +1,138 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.5);
+  animation: fadeIn 150ms ease;
+}
+
+.modal {
+  display: grid;
+  width: min(520px, 100%);
+  gap: 14px;
+  border-radius: 16px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+  animation: modalIn 180ms var(--ease-out);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header span {
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin: 4px 0 0;
+  color: #111827;
+  font-size: 1.05rem;
+}
+
+.close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #eef2f0;
+  color: #111827;
+  cursor: pointer;
+  font-weight: 900;
+  transition:
+    background 160ms ease,
+    transform 160ms var(--ease-out);
+}
+
+.close:hover {
+  background: #dfe8e4;
+  transform: scale(1.04);
+}
+
+.textarea {
+  min-height: 130px;
+  resize: vertical;
+  border: 1px solid #d7e2de;
+  border-radius: 12px;
+  padding: 12px;
+  color: #111827;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.textarea:focus {
+  border-color: var(--primary);
+  outline: 3px solid var(--primary-soft);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.footer button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 16px;
+  cursor: pointer;
+  font-weight: 900;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms var(--ease-out);
+}
+
+.footer button:hover:not(:disabled) {
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.footer button:first-child {
+  background: #eef2f0;
+  color: #263631;
+}
+
+.footer button:last-child {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.footer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -1,0 +1,421 @@
+.form {
+  display: grid;
+  grid-template-columns: 40px 40px 40px minmax(0, 1fr) 44px;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid var(--outline);
+  padding: 10px 12px;
+  background: #f6f7f8;
+}
+
+.previews {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  animation: slideUp 160ms var(--ease-out);
+}
+
+.recordingBar,
+.recordingError,
+.emojiPicker,
+.shortcuts {
+  grid-column: 1 / -1;
+}
+
+.recordingBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff1f2;
+  color: #991b1b;
+  font-size: 0.86rem;
+  font-weight: 800;
+  animation: slideUp 160ms var(--ease-out);
+}
+
+.recordingBar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #dc2626;
+  animation: pulse 1s infinite;
+}
+
+.recordingBar button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #ffffff;
+  color: #7f1d1d;
+  cursor: pointer;
+  font-weight: 800;
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.recordingBar button:hover {
+  background: #ffe4e6;
+  transform: translateY(-1px);
+}
+
+.recordingError {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.82rem;
+}
+
+.emojiPicker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 6px;
+  border: 1px solid #d7e2de;
+  border-radius: 12px;
+  padding: 10px;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+  animation: slideUp 160ms var(--ease-out);
+}
+
+.emojiPicker button {
+  display: grid;
+  min-height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: #f4f7f6;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.emojiPicker button:hover {
+  background: #e4f4ed;
+  transform: translateY(-1px) scale(1.04);
+}
+
+.shortcuts {
+  overflow: hidden;
+  border: 1px solid #cfe7dd;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+  animation: slideUp 160ms var(--ease-out);
+}
+
+.shortcutsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #edf3f0;
+  padding: 10px 12px;
+  background: #f5fbf8;
+}
+
+.shortcutsHeader strong {
+  color: #173b31;
+  font-size: 0.78rem;
+}
+
+.shortcutsHeader small {
+  color: #68756f;
+  font-size: 0.72rem;
+}
+
+.shortcuts > p {
+  margin: 0;
+  padding: 12px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.shortcuts > button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+  align-items: center;
+  border: 0;
+  border-top: 1px solid #edf3f0;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #17231f;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.shortcuts > button:hover,
+.activeShortcut,
+.createShortcut {
+  background: #eaf8f2 !important;
+}
+
+.shortcuts > button:hover {
+  transform: translateX(2px);
+}
+
+.shortcuts > button > span {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #dff5eb;
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.shortcuts button strong,
+.shortcuts button small {
+  display: block;
+}
+
+.shortcuts button strong {
+  color: #111827;
+  font-size: 0.82rem;
+}
+
+.shortcuts button small {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 3px;
+  color: #5f6b66;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.preview {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px minmax(120px, 180px) 24px;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--outline);
+  border-radius: 10px;
+  padding: 8px;
+  background: #f7f9fc;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  animation: slideUp 160ms var(--ease-out);
+}
+
+.preview img,
+.preview > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 900;
+  object-fit: cover;
+}
+
+.preview strong,
+.preview small {
+  display: block;
+}
+
+.preview strong {
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview small {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.preview button {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: #e5e7eb;
+  cursor: pointer;
+  color: var(--text-main);
+  font-weight: 900;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.preview button:hover {
+  background: #fecaca;
+  color: #991b1b;
+  transform: scale(1.06);
+}
+
+.fileInput {
+  display: none;
+}
+
+.attach {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #5f6b66;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  line-height: 1;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.attach:hover {
+  background: #edf3f1;
+  color: var(--primary);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.recording {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #dc2626;
+}
+
+.micIcon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.form textarea {
+  min-height: 40px;
+  max-height: 140px;
+  resize: vertical;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: var(--text-main);
+  box-shadow: inset 0 0 0 1px #e1e7e4;
+  transition:
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.form textarea:focus {
+  box-shadow:
+    inset 0 0 0 1px var(--primary),
+    0 0 0 3px var(--primary-soft);
+  outline: 0;
+}
+
+.form > button[type="submit"] {
+  display: grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  place-items: center;
+  border-radius: 999px;
+  padding: 0;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.form > button[type="submit"]:hover:not(:disabled) {
+  box-shadow: 0 10px 24px rgba(7, 94, 84, 0.22);
+  transform: translateY(-1px) scale(1.02);
+}
+
+.sendIcon {
+  width: 19px;
+  height: 19px;
+  fill: currentColor;
+}
+
+.sendText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .form {
+    grid-template-columns: 36px 36px 36px minmax(0, 1fr) 40px;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .attach {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .form textarea {
+    min-height: 38px;
+    max-height: 110px;
+    padding: 8px 10px;
+    resize: none;
+  }
+
+  .form > button[type="submit"] {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .shortcuts > button {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

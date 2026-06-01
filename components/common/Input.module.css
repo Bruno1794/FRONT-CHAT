@@ -1,0 +1,25 @@
+.field {
+  display: grid;
+  gap: 8px;
+  color: var(--text-main);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.field input {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  padding: 0 12px;
+  background: #ffffff;
+  color: var(--text-main);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.field input:focus {
+  border-color: var(--primary);
+  outline: 3px solid var(--primary-soft);
+}

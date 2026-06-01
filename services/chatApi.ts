@@ -1,0 +1,276 @@
+import { apiFetch } from "@/services/api";
+import type {
+  Attachment,
+  AuthResponse,
+  Conversation,
+  ConversationDetails,
+  ConversationStatus,
+  Message,
+  MessageType,
+  SenderType,
+  Shortcut,
+  UploadResponse,
+  User,
+} from "@/types";
+import { getApiUrl } from "./api";
+
+export function login(email: string, senha: string) {
+  return apiFetch<AuthResponse>("/auth/login", {
+    method: "POST",
+    json: { email, senha },
+  });
+}
+
+export function logout(token: string) {
+  return apiFetch<void>("/auth/logout", {
+    method: "POST",
+    token,
+  });
+}
+
+export function getMe(token: string) {
+  return apiFetch<User>("/auth/me", { token });
+}
+
+export function getConversations(token: string, search?: string) {
+  const params = new URLSearchParams();
+
+  if (search) {
+    params.set("search", search);
+  }
+
+  const query = params.toString();
+  return apiFetch<Conversation[]>(`/conversations${query ? `?${query}` : ""}`, {
+    token,
+  });
+}
+
+export function getConversation(token: string, id: number) {
+  return apiFetch<ConversationDetails>(`/conversations/${id}`, { token });
+}
+
+export function updateConversation(
+  token: string,
+  id: number,
+  payload: { status?: ConversationStatus; atendente_id?: number },
+) {
+  return apiFetch<Conversation>(`/conversations/${id}`, {
+    method: "PUT",
+    token,
+    json: payload,
+  });
+}
+
+export function closeConversation(token: string, id: number) {
+  return apiFetch<Conversation>(`/conversations/${id}/close`, {
+    method: "POST",
+    token,
+  });
+}
+
+export function reopenConversation(token: string, id: number) {
+  return apiFetch<Conversation>(`/conversations/${id}/reopen`, {
+    method: "POST",
+    token,
+  });
+}
+
+export function createConversation(
+  codeOrClienteId: string,
+  token?: string,
+) {
+  const json = token
+    ? { cliente_id_externo: codeOrClienteId }
+    : { codigo: codeOrClienteId };
+
+  return apiFetch<Conversation>("/conversations", {
+    method: "POST",
+    token,
+    json,
+  });
+}
+
+export function getMessages(token: string, conversationId: number) {
+  return apiFetch<Message[]>(`/messages/${conversationId}`, { token });
+}
+
+export function getClientMessages(conversationId: number, code: string) {
+  const params = new URLSearchParams();
+  params.set("codigo", code);
+
+  return apiFetch<Message[]>(`/messages/${conversationId}?${params.toString()}`);
+}
+
+export function markMessageAsRead(messageId: number, token?: string) {
+  return apiFetch<Message>(`/messages/${messageId}/read`, {
+    method: "PUT",
+    token,
+  });
+}
+
+export function reactToMessage(payload: {
+  messageId: number;
+  emoji: string;
+  actor_type?: "CLIENTE" | "ATENDENTE";
+  actor_id?: string | number;
+  token?: string;
+}) {
+  const { messageId, token, ...body } = payload;
+
+  return apiFetch<Message>(`/messages/${messageId}/reaction`, {
+    method: "PUT",
+    token,
+    json: body,
+  });
+}
+
+export function deleteMessageReaction(payload: {
+  messageId: number;
+  actor_type?: "CLIENTE" | "ATENDENTE";
+  actor_id?: string | number;
+  token?: string;
+}) {
+  const { messageId, token, ...body } = payload;
+
+  return apiFetch<Message>(`/messages/${messageId}/reaction`, {
+    method: "DELETE",
+    token,
+    json: body,
+  });
+}
+
+export function getShortcutSuggestions(token: string, query: string) {
+  const params = new URLSearchParams();
+
+  params.set("q", query);
+
+  return apiFetch<Shortcut[]>(`/shortcuts/suggestions?${params.toString()}`, {
+    token,
+  });
+}
+
+export function getShortcuts(token: string, search?: string) {
+  const params = new URLSearchParams();
+
+  if (search) {
+    params.set("search", search);
+  }
+
+  const query = params.toString();
+
+  return apiFetch<Shortcut[]>(`/shortcuts${query ? `?${query}` : ""}`, {
+    token,
+  });
+}
+
+export function createShortcut(
+  token: string,
+  payload: {
+    shortcut: string;
+    title: string;
+    message: string;
+    active?: boolean;
+    global?: boolean;
+  },
+) {
+  return apiFetch<Shortcut>("/shortcuts", {
+    method: "POST",
+    token,
+    json: payload,
+  });
+}
+
+export function updateShortcut(
+  token: string,
+  id: number,
+  payload: {
+    shortcut?: string;
+    title?: string;
+    message?: string;
+    active?: boolean;
+    global?: boolean;
+  },
+) {
+  return apiFetch<Shortcut>(`/shortcuts/${id}`, {
+    method: "PUT",
+    token,
+    json: payload,
+  });
+}
+
+export function deleteShortcut(token: string, id: number) {
+  return apiFetch<{ success: boolean }>(`/shortcuts/${id}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export function sendMessage(payload: {
+  conversation_id: number;
+  sender_type: SenderType;
+  sender_id?: string | number;
+  message: string;
+  message_type?: MessageType;
+  attachments?: Attachment[];
+  token?: string;
+}) {
+  const { token, message_type = "TEXT", ...body } = payload;
+
+  return apiFetch<Message>("/messages", {
+    method: "POST",
+    token,
+    json: {
+      ...body,
+      message_type,
+    },
+  });
+}
+
+export function updateMessage(payload: {
+  messageId: number;
+  message: string;
+  actor_type?: "CLIENTE" | "ATENDENTE";
+  actor_id?: string | number;
+  token?: string;
+}) {
+  const { messageId, token, ...body } = payload;
+
+  return apiFetch<Message>(`/messages/${messageId}`, {
+    method: "PUT",
+    token,
+    json: body,
+  });
+}
+
+export function deleteMessage(payload: {
+  messageId: number;
+  actor_type?: "CLIENTE" | "ATENDENTE";
+  actor_id?: string | number;
+  token?: string;
+}) {
+  const { messageId, token, ...body } = payload;
+
+  return apiFetch<Message>(`/messages/${messageId}`, {
+    method: "DELETE",
+    token,
+    json: body,
+  });
+}
+
+export async function uploadFile(file: File, token?: string) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const uploadUrl = token ? `${getApiUrl()}/upload` : "/api/upload";
+  const response = await fetch(uploadUrl, {
+    method: "POST",
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Falha ao enviar ${file.name}.`);
+  }
+
+  return response.json() as Promise<UploadResponse>;
+}

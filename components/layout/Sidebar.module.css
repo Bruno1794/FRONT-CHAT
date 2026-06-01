@@ -1,0 +1,211 @@
+.mobileMenuButton,
+.mobileBackdrop {
+  display: none;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 104px;
+  flex: 0 0 104px;
+  min-height: 100%;
+  border-right: 1px solid #d7dedb;
+  background: #ffffff;
+  box-shadow: 8px 0 24px rgba(15, 23, 42, 0.04);
+}
+
+.mobileMenuButton svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: transform 160ms ease;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 8px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-decoration: none;
+  text-align: center;
+  line-height: 1.05;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.nav {
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 10px 6px;
+}
+
+.nav a {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  align-items: center;
+  border-left: 3px solid transparent;
+  border-radius: 10px;
+  padding: 10px 4px;
+  color: #50605c;
+  text-decoration: none;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.nav span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 8px;
+  background: #edf3f1;
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 900;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.nav small {
+  display: block;
+  width: 100%;
+  max-width: 86px;
+  overflow-wrap: anywhere;
+  font-size: 0.68rem;
+  line-height: 1.1;
+}
+
+.activeNav,
+.nav a:hover {
+  border-left-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.nav a:hover {
+  box-shadow: 0 8px 18px rgba(7, 94, 84, 0.08);
+  transform: translateY(-1px);
+}
+
+.nav a:hover span,
+.activeNav span {
+  background: #ffffff;
+  transform: scale(1.04);
+}
+
+@media (max-width: 900px) {
+  .mobileMenuButton {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 60;
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: var(--primary);
+    color: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
+    transition:
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  .mobileMenuButton:hover {
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.26);
+    transform: translateY(-1px);
+  }
+
+  .mobileMenuButton:hover svg {
+    transform: scale(1.05);
+  }
+
+  .hideMobileMenuButton {
+    display: none;
+  }
+
+  .mobileBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 58;
+    display: block;
+    border: 0;
+    background: rgba(15, 23, 42, 0.45);
+    animation: fadeIn 150ms ease;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 59;
+    width: min(260px, 82vw);
+    flex: none;
+    min-height: 100vh;
+    border-right: 1px solid var(--outline);
+    border-bottom: 0;
+    flex-direction: column;
+    transform: translateX(-105%);
+    transition: transform 180ms var(--ease-out);
+  }
+
+  .open {
+    transform: translateX(0);
+  }
+
+  .nav {
+    display: grid;
+    flex: 1;
+    overflow: auto;
+    padding: 10px;
+  }
+
+  .nav a {
+    grid-template-columns: 38px 1fr;
+    justify-items: start;
+    white-space: normal;
+    border-left: 3px solid transparent;
+    border-bottom: 0;
+    padding: 10px;
+    text-align: left;
+  }
+
+  .nav small {
+    max-width: none;
+    overflow-wrap: normal;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
