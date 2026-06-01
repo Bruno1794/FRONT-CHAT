@@ -271,7 +271,18 @@ export async function uploadFile(file: File, token?: string) {
   });
 
   if (!response.ok) {
-    throw new Error(`Falha ao enviar ${file.name}.`);
+    let detail = "";
+
+    try {
+      const errorBody = (await response.json()) as { message?: string; error?: string };
+      detail = errorBody.message ?? errorBody.error ?? "";
+    } catch {
+      detail = await response.text().catch(() => "");
+    }
+
+    throw new Error(
+      detail ? `Falha ao enviar ${file.name}: ${detail}` : `Falha ao enviar ${file.name}.`,
+    );
   }
 
   return response.json() as Promise<UploadResponse>;
