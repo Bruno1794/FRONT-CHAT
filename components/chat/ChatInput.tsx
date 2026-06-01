@@ -407,6 +407,7 @@ export function ChatInput({
         ref={fileInputRef}
         className={styles.fileInput}
         type="file"
+        accept="image/*,audio/*,video/*,.pdf,.zip,.rar,.apk,.doc,.docx,.xls,.xlsx,.txt"
         multiple
         onChange={handleFileChange}
       />

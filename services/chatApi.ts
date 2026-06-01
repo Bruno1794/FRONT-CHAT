@@ -12,6 +12,7 @@ import type {
   UploadResponse,
   User,
 } from "@/types";
+import { prepareFileForUpload } from "@/utils/imageCompression";
 import { getApiUrl } from "./api";
 
 export function login(email: string, senha: string) {
@@ -258,10 +259,11 @@ export function deleteMessage(payload: {
 }
 
 export async function uploadFile(file: File, token?: string) {
+  const preparedFile = await prepareFileForUpload(file);
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", preparedFile);
 
-  const uploadUrl = token ? `${getApiUrl()}/upload` : "/api/upload";
+  const uploadUrl = `${getApiUrl()}/upload`;
   const response = await fetch(uploadUrl, {
     method: "POST",
     body: formData,
