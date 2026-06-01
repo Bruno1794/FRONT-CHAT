@@ -102,6 +102,31 @@ export function getClientMessages(conversationId: number, code: string) {
   return apiFetch<Message[]>(`/messages/${conversationId}?${params.toString()}`);
 }
 
+export function getPushConfig() {
+  return apiFetch<{ enabled: boolean; publicKey: string | null }>("/push/config");
+}
+
+export function subscribeToPush(payload: {
+  codigo: string;
+  conversation_id: number;
+  subscription: PushSubscriptionJSON;
+}) {
+  return apiFetch<{ success: boolean }>("/push/subscribe", {
+    method: "POST",
+    json: payload,
+  });
+}
+
+export function unsubscribeFromPush(payload: {
+  endpoint?: string | null;
+  subscription?: PushSubscriptionJSON | null;
+}) {
+  return apiFetch<{ success: boolean }>("/push/subscribe", {
+    method: "DELETE",
+    json: payload,
+  });
+}
+
 export function markMessageAsRead(messageId: number, token?: string) {
   return apiFetch<Message>(`/messages/${messageId}/read`, {
     method: "PUT",

@@ -11,9 +11,11 @@ import {
   deleteMessage,
   deleteMessageReaction,
   getClientMessages,
+  getPushConfig,
   markMessageAsRead,
   reactToMessage,
   sendMessage,
+  subscribeToPush,
   updateMessage,
   uploadFile,
 } from "@/services/chatApi";
@@ -30,6 +32,7 @@ import { formatMessageDateLabel, getDateKey } from "@/utils/formatters";
 import styles from "@/app/chat/chat.module.css";
 
 const CLIENT_CHAT_SESSION_KEY = "suportesync.clientChat";
+const CLIENT_PUSH_ENABLED_KEY = "suportesync.clientPushEnabled";
 
 type WindowWithAudioContext = Window & {
   AudioContext?: typeof AudioContext;
@@ -53,6 +56,8 @@ type StoredClientChat = {
   conversation: Conversation;
 };
 
+type PushState = "idle" | "unsupported" | "blocked" | "ready" | "subscribing" | "active" | "error";
+
 function buildStartedMessage(conversationId: number): Message {
   return {
     id: -1,
@@ -73,6 +78,30 @@ function isRunningInstalledPwa() {
     window.matchMedia("(display-mode: standalone)").matches ||
     Boolean((navigator as NavigatorWithStandalone).standalone)
   );
+}
+
+function urlBase64ToUint8Array(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const output = new Uint8Array(rawData.length);
+
+  for (let index = 0; index < rawData.length; index += 1) {
+    output[index] = rawData.charCodeAt(index);
+  }
+
+  return output;
+}
+
+async function getServiceWorkerRegistration() {
+  const existingRegistration = await navigator.serviceWorker.getRegistration();
+
+  if (existingRegistration) {
+    return existingRegistration;
+  }
+
+  await navigator.serviceWorker.register("/sw.js");
+  return navigator.serviceWorker.ready;
 }
 
 function readStoredClientChat(initialCode: string) {
@@ -145,6 +174,8 @@ export function ChatWidgetClient() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [isPwaInstalled, setIsPwaInstalled] = useState(isRunningInstalledPwa);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [pushState, setPushState] = useState<PushState>("idle");
+  const [pushError, setPushError] = useState("");
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -154,6 +185,8 @@ export function ChatWidgetClient() {
   const socket = useSocket();
   const isAttendantOnline = Boolean(presence?.atendentes);
   const shouldShowInstallPrompt = !isPwaInstalled;
+  const shouldShowPushPrompt =
+    Boolean(conversation) && !["active", "unsupported", "blocked"].includes(pushState);
 
   const normalizeSearchValue = (value?: string | number | null) =>
     String(value ?? "")
@@ -315,6 +348,43 @@ export function ChatWidgetClient() {
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
+
+  useEffect(() => {
+    if (!conversation || typeof window === "undefined") {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+        setPushState("unsupported");
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        setPushState("blocked");
+        return;
+      }
+
+      void navigator.serviceWorker
+        .getRegistration()
+        .then((registration) => {
+          if (!registration) {
+            return null;
+          }
+
+          return registration.pushManager.getSubscription();
+        })
+        .then((subscription) => {
+          const isKnownEnabled =
+            localStorage.getItem(CLIENT_PUSH_ENABLED_KEY) === "true";
+
+          setPushState(subscription || isKnownEnabled ? "active" : "ready");
+        })
+        .catch(() => setPushState("ready"));
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [conversation]);
 
   useEffect(() => {
     if (!initialCode || conversation || hasAutoStartedRef.current) {
@@ -523,6 +593,69 @@ export function ChatWidgetClient() {
     }
   };
 
+  const handleEnablePushNotifications = async () => {
+    if (!conversation) {
+      return;
+    }
+
+    setPushError("");
+
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setPushState("unsupported");
+      return;
+    }
+
+    if (Notification.permission === "denied") {
+      setPushState("blocked");
+      return;
+    }
+
+    setPushState("subscribing");
+
+    try {
+      const permission =
+        Notification.permission === "granted"
+          ? "granted"
+          : await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        setPushState(permission === "denied" ? "blocked" : "ready");
+        return;
+      }
+
+      const config = await getPushConfig();
+
+      if (!config.enabled || !config.publicKey) {
+        throw new Error("Notificacoes ainda nao estao configuradas no servidor.");
+      }
+
+      const registration = await getServiceWorkerRegistration();
+      const existingSubscription = await registration.pushManager.getSubscription();
+      const subscription =
+        existingSubscription ??
+        (await registration.pushManager.subscribe({
+          applicationServerKey: urlBase64ToUint8Array(config.publicKey),
+          userVisibleOnly: true,
+        }));
+
+      await subscribeToPush({
+        codigo: codigoAcesso,
+        conversation_id: conversation.id,
+        subscription: subscription.toJSON(),
+      });
+
+      localStorage.setItem(CLIENT_PUSH_ENABLED_KEY, "true");
+      setPushState("active");
+    } catch (err) {
+      setPushError(
+        err instanceof Error
+          ? err.message
+          : "Nao foi possivel ativar as notificacoes.",
+      );
+      setPushState("error");
+    }
+  };
+
   const getMessageType = (attachments: Attachment[], text: string): MessageType => {
     if (attachments.length === 0) {
       return "TEXT";
@@ -702,6 +835,26 @@ export function ChatWidgetClient() {
       </button>
     </aside>
   ) : null;
+  const pushPrompt = shouldShowPushPrompt ? (
+    <aside className={styles.notificationPrompt}>
+      <div>
+        <strong>Receba avisos no celular</strong>
+        <p>Ative notificacoes para saber quando o suporte responder.</p>
+        {pushError ? <small>{pushError}</small> : null}
+      </div>
+      <button
+        type="button"
+        disabled={pushState === "subscribing"}
+        onClick={handleEnablePushNotifications}
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+          <path d="M10 21h4" />
+        </svg>
+        {pushState === "subscribing" ? "Ativando..." : "Ativar"}
+      </button>
+    </aside>
+  ) : null;
 
   return (
     <main
@@ -747,6 +900,7 @@ export function ChatWidgetClient() {
 
         {error ? <p className={styles.error}>{error}</p> : null}
         {conversation ? installPrompt : null}
+        {conversation ? pushPrompt : null}
 
         {conversation && isThreadSearchOpen ? (
           <div className={styles.threadSearchBar}>

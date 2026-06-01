@@ -372,7 +372,8 @@
   color: var(--danger);
 }
 
-.installPrompt {
+.installPrompt,
+.notificationPrompt {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
@@ -385,17 +386,27 @@
   animation: panelIn 180ms var(--ease-out);
 }
 
+.notificationPrompt {
+  background: #eef7ff;
+  color: #17324a;
+}
+
 .installPrompt strong,
 .installPrompt p,
-.installPrompt small {
+.installPrompt small,
+.notificationPrompt strong,
+.notificationPrompt p,
+.notificationPrompt small {
   display: block;
 }
 
-.installPrompt strong {
+.installPrompt strong,
+.notificationPrompt strong {
   font-size: 0.84rem;
 }
 
-.installPrompt p {
+.installPrompt p,
+.notificationPrompt p {
   margin: 2px 0 0;
   color: #52605b;
   font-size: 0.76rem;
@@ -410,7 +421,16 @@
   line-height: 1.3;
 }
 
-.installPrompt button {
+.notificationPrompt small {
+  margin-top: 5px;
+  color: #b42318;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.installPrompt button,
+.notificationPrompt button {
   display: inline-flex;
   min-height: 36px;
   align-items: center;
@@ -425,16 +445,28 @@
   font-size: 0.78rem;
   font-weight: 900;
   transition:
+    opacity 160ms ease,
     box-shadow 160ms ease,
     transform 160ms ease;
 }
 
-.installPrompt button:hover {
+.notificationPrompt button {
+  background: #0b5f8a;
+}
+
+.installPrompt button:hover,
+.notificationPrompt button:hover:not(:disabled) {
   box-shadow: 0 10px 22px rgba(7, 94, 84, 0.18);
   transform: translateY(-1px);
 }
 
-.installPrompt svg {
+.notificationPrompt button:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
+.installPrompt svg,
+.notificationPrompt svg {
   width: 16px;
   height: 16px;
   fill: none;
@@ -444,7 +476,8 @@
   stroke-linejoin: round;
 }
 
-.startPanel .installPrompt {
+.startPanel .installPrompt,
+.startPanel .notificationPrompt {
   width: 100%;
   grid-template-columns: 1fr;
   justify-items: stretch;
@@ -455,7 +488,8 @@
   text-align: left;
 }
 
-.startPanel .installPrompt button {
+.startPanel .installPrompt button,
+.startPanel .notificationPrompt button {
   width: 100%;
 }
 
@@ -529,13 +563,15 @@
     padding: 8px;
   }
 
-  .installPrompt {
+  .installPrompt,
+  .notificationPrompt {
     grid-template-columns: 1fr;
     gap: 9px;
     padding: 10px;
   }
 
-  .installPrompt button {
+  .installPrompt button,
+  .notificationPrompt button {
     width: 100%;
   }
 
