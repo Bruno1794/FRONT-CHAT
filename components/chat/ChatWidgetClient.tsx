@@ -36,6 +36,18 @@ type WindowWithAudioContext = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+};
+
+type NavigatorWithStandalone = Navigator & {
+  standalone?: boolean;
+};
+
 type StoredClientChat = {
   code: string;
   conversation: Conversation;
@@ -50,6 +62,17 @@ function buildStartedMessage(conversationId: number): Message {
     message_type: "TEXT",
     created_at: new Date().toISOString(),
   };
+}
+
+function isRunningInstalledPwa() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((navigator as NavigatorWithStandalone).standalone)
+  );
 }
 
 function readStoredClientChat(initialCode: string) {
@@ -118,6 +141,10 @@ export function ChatWidgetClient() {
   const [isThreadSearchOpen, setIsThreadSearchOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
   const [activeThreadMatchIndex, setActiveThreadMatchIndex] = useState(0);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [isPwaInstalled, setIsPwaInstalled] = useState(isRunningInstalledPwa);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -126,6 +153,7 @@ export function ChatWidgetClient() {
   const hasAutoStartedRef = useRef(false);
   const socket = useSocket();
   const isAttendantOnline = Boolean(presence?.atendentes);
+  const shouldShowInstallPrompt = !isPwaInstalled;
 
   const normalizeSearchValue = (value?: string | number | null) =>
     String(value ?? "")
@@ -264,6 +292,28 @@ export function ChatWidgetClient() {
     } catch {
       // Audio support is optional.
     }
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
+      setShowInstallHelp(false);
+    };
+
+    const handleAppInstalled = () => {
+      setDeferredInstallPrompt(null);
+      setIsPwaInstalled(true);
+      setShowInstallHelp(false);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
   }, []);
 
   useEffect(() => {
@@ -456,6 +506,23 @@ export function ChatWidgetClient() {
     await startConversation(code);
   };
 
+  const handleInstallApp = async () => {
+    if (!deferredInstallPrompt) {
+      setShowInstallHelp(true);
+      return;
+    }
+
+    await deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+
+    setDeferredInstallPrompt(null);
+    setShowInstallHelp(choice.outcome !== "accepted");
+
+    if (choice.outcome === "accepted") {
+      setIsPwaInstalled(true);
+    }
+  };
+
   const getMessageType = (attachments: Attachment[], text: string): MessageType => {
     if (attachments.length === 0) {
       return "TEXT";
@@ -613,6 +680,29 @@ export function ChatWidgetClient() {
     setPendingFiles((current) => [...current, ...Array.from(files)]);
   };
 
+  const installPrompt = shouldShowInstallPrompt ? (
+    <aside className={styles.installPrompt}>
+      <div>
+        <strong>Instale o app no celular</strong>
+        <p>Acesse este atendimento mais rapido direto pela tela inicial.</p>
+        {showInstallHelp ? (
+          <small>
+            Se a instalacao nao abrir, use o menu do navegador e toque em
+            &quot;Adicionar a tela inicial&quot;.
+          </small>
+        ) : null}
+      </div>
+      <button type="button" onClick={handleInstallApp}>
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M12 3v12" />
+          <path d="m7 10 5 5 5-5" />
+          <path d="M5 21h14" />
+        </svg>
+        Instalar
+      </button>
+    </aside>
+  ) : null;
+
   return (
     <main
       className={styles.page}
@@ -656,6 +746,7 @@ export function ChatWidgetClient() {
         </header>
 
         {error ? <p className={styles.error}>{error}</p> : null}
+        {conversation ? installPrompt : null}
 
         {conversation && isThreadSearchOpen ? (
           <div className={styles.threadSearchBar}>
@@ -750,6 +841,7 @@ export function ChatWidgetClient() {
               <span className={styles.startIcon}>?</span>
               <h2>Como podemos ajudar?</h2>
               <p>Informe seu codigo de acesso para iniciar o suporte.</p>
+              {installPrompt}
               <form className={styles.startForm} onSubmit={handleStart}>
                 <label>
                   <span>Codigo de acesso</span>
