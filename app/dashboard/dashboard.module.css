@@ -14,6 +14,66 @@
   flex-direction: column;
 }
 
+.adminPrompt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  flex-shrink: 0;
+  border-bottom: 1px solid #dfe8e4;
+  padding: 10px 16px;
+  background: #eef7f3;
+  color: #173b31;
+  animation: panelIn 180ms var(--ease-out);
+}
+
+.adminPrompt strong,
+.adminPrompt p,
+.adminPrompt small {
+  display: block;
+}
+
+.adminPrompt strong {
+  font-size: 0.84rem;
+}
+
+.adminPrompt p {
+  margin: 2px 0 0;
+  color: #52605b;
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.adminPrompt small {
+  margin-top: 5px;
+  color: #b42318;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.adminPromptActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adminPromptActions button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #007a4d;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.adminPromptActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .content {
   display: grid;
   flex: 1;
@@ -1194,6 +1254,16 @@
   .workspace {
     flex: 1;
     min-height: 0;
+  }
+
+  .adminPrompt {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .adminPromptActions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .content {

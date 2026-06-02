@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SuporteSync Chat",
+    name: "SuporteSync",
     short_name: "SuporteSync",
-    description: "Chat de atendimento SuporteSync.",
-    start_url: "/chat",
+    description: "Painel e chat de atendimento SuporteSync.",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     background_color: "#e8dfd5",

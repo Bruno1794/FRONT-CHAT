@@ -20,11 +20,13 @@ import {
   deleteMessage,
   getConversations,
   getMessages,
+  getPushConfig,
   markMessageAsRead,
   reactToMessage,
   reopenConversation,
   sendBroadcastNotice,
   sendMessage,
+  subscribeAdminToPush,
   updateMessage,
   uploadFile,
 } from "@/services/chatApi";
@@ -51,6 +53,65 @@ type WindowWithAudioContext = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+};
+
+type PushState = "idle" | "unsupported" | "blocked" | "ready" | "subscribing" | "active" | "error";
+
+const ADMIN_PUSH_ENABLED_KEY = "suportesync.adminPushEnabled";
+
+function isRunningInstalledPwa() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.matchMedia("(display-mode: standalone)").matches;
+}
+
+function urlBase64ToUint8Array(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const output = new Uint8Array(rawData.length);
+
+  for (let index = 0; index < rawData.length; index += 1) {
+    output[index] = rawData.charCodeAt(index);
+  }
+
+  return output;
+}
+
+async function getServiceWorkerRegistration() {
+  const existingRegistration = await navigator.serviceWorker.getRegistration();
+
+  if (existingRegistration) {
+    await existingRegistration.update().catch(() => undefined);
+    return existingRegistration;
+  }
+
+  await navigator.serviceWorker.register("/sw.js");
+  return navigator.serviceWorker.ready;
+}
+
+async function subscribeBrowserToPush(registration: ServiceWorkerRegistration, publicKey: string) {
+  const applicationServerKey = urlBase64ToUint8Array(publicKey);
+  const existingSubscription = await registration.pushManager.getSubscription();
+
+  if (existingSubscription) {
+    return existingSubscription;
+  }
+
+  return registration.pushManager.subscribe({
+    applicationServerKey,
+    userVisibleOnly: true,
+  });
+}
+
 export function DashboardClient() {
   useVisualViewportHeight();
 
@@ -75,6 +136,16 @@ export function DashboardClient() {
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastFeedback, setBroadcastFeedback] = useState("");
   const [isBroadcastSending, setIsBroadcastSending] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [isPwaInstalled, setIsPwaInstalled] = useState(isRunningInstalledPwa);
+  const [pushState, setPushState] = useState<PushState>(() =>
+    typeof window !== "undefined" &&
+    localStorage.getItem(ADMIN_PUSH_ENABLED_KEY) === "true"
+      ? "active"
+      : "idle",
+  );
+  const [pushError, setPushError] = useState("");
   const [isThreadSearchOpen, setIsThreadSearchOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
   const [activeThreadMatchIndex, setActiveThreadMatchIndex] = useState(0);
@@ -103,6 +174,9 @@ export function DashboardClient() {
   const selectedPresence = selectedId ? conversationPresence[selectedId] : undefined;
   const isSelectedClientOnline = Boolean(selectedPresence?.clientes);
   const selectedClientLastSeen = selectedId ? clientLastSeen[selectedId] : undefined;
+  const shouldShowAdminPushPrompt =
+    Boolean(token) && !["active", "unsupported", "blocked"].includes(pushState);
+  const shouldShowInstallPrompt = Boolean(deferredInstallPrompt) && !isPwaInstalled;
 
   const getClienteLabel = (conversation: Conversation) =>
     conversation.cliente?.referencia ??
@@ -402,6 +476,53 @@ export function DashboardClient() {
   }, []);
 
   useEffect(() => {
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setIsPwaInstalled(true);
+      setDeferredInstallPrompt(null);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!token || pushState !== "idle") {
+      return;
+    }
+
+    queueMicrotask(() => {
+      if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+        setPushState("unsupported");
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        setPushState("blocked");
+        return;
+      }
+
+      if (Notification.permission === "granted") {
+        setPushState(
+          localStorage.getItem(ADMIN_PUSH_ENABLED_KEY) === "true" ? "active" : "ready",
+        );
+        return;
+      }
+
+      setPushState("ready");
+    });
+  }, [pushState, token]);
+
+  useEffect(() => {
     queueMicrotask(() => {
       const storedToken = getAccessToken();
 
@@ -424,6 +545,73 @@ export function DashboardClient() {
         .finally(() => setIsLoading(false));
     });
   }, [loadConversations, router]);
+
+  const handleInstallPwa = async () => {
+    if (!deferredInstallPrompt) {
+      return;
+    }
+
+    await deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice.catch(() => null);
+
+    if (choice?.outcome === "accepted") {
+      setIsPwaInstalled(true);
+    }
+
+    setDeferredInstallPrompt(null);
+  };
+
+  const handleEnableAdminPush = async () => {
+    if (!token) {
+      return;
+    }
+
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setPushState("unsupported");
+      setPushError("Este navegador nao suporta notificacoes push.");
+      return;
+    }
+
+    if (Notification.permission === "denied") {
+      setPushState("blocked");
+      setPushError("As notificacoes estao bloqueadas neste navegador.");
+      return;
+    }
+
+    setPushState("subscribing");
+    setPushError("");
+
+    try {
+      const permission =
+        Notification.permission === "granted"
+          ? "granted"
+          : await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        setPushState("ready");
+        setPushError("Permissao de notificacao nao foi concedida.");
+        return;
+      }
+
+      const config = await getPushConfig();
+
+      if (!config.enabled || !config.publicKey) {
+        throw new Error("Push nao esta configurado na API.");
+      }
+
+      const registration = await getServiceWorkerRegistration();
+      const subscription = await subscribeBrowserToPush(registration, config.publicKey);
+
+      await subscribeAdminToPush(token, { subscription: subscription.toJSON() });
+      localStorage.setItem(ADMIN_PUSH_ENABLED_KEY, "true");
+      setPushState("active");
+    } catch (err) {
+      setPushState("error");
+      setPushError(
+        err instanceof Error ? err.message : "Nao foi possivel ativar notificacoes.",
+      );
+    }
+  };
 
   useEffect(() => {
     if (!token || selectedId === null) {
@@ -974,6 +1162,35 @@ export function DashboardClient() {
         onClick={unlockNotificationSound}
         onKeyDown={unlockNotificationSound}
       >
+        {shouldShowInstallPrompt || shouldShowAdminPushPrompt ? (
+          <aside className={styles.adminPrompt}>
+            <div>
+              <strong>Atendimento no celular</strong>
+              <p>
+                Instale o painel e ative notificacoes para receber novas mensagens
+                de clientes.
+              </p>
+              {pushError ? <small>{pushError}</small> : null}
+            </div>
+            <div className={styles.adminPromptActions}>
+              {shouldShowInstallPrompt ? (
+                <button type="button" onClick={handleInstallPwa}>
+                  Instalar
+                </button>
+              ) : null}
+              {shouldShowAdminPushPrompt ? (
+                <button
+                  type="button"
+                  disabled={pushState === "subscribing"}
+                  onClick={handleEnableAdminPush}
+                >
+                  {pushState === "subscribing" ? "Ativando..." : "Ativar notificacoes"}
+                </button>
+              ) : null}
+            </div>
+          </aside>
+        ) : null}
+
         {activeTab === "dashboard" ? (
           <div className={styles.placeholderView}>
             <span>Dashboard</span>

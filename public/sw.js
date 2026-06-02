@@ -1,5 +1,5 @@
 const CACHE_NAME = "suportesync-pwa-v1";
-const STATIC_ASSETS = ["/", "/chat", "/manifest.webmanifest"];
+const STATIC_ASSETS = ["/", "/chat", "/dashboard", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
