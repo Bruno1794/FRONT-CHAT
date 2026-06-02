@@ -290,6 +290,7 @@ export function ChatWidgetClient() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [isPwaInstalled, setIsPwaInstalled] = useState(isRunningInstalledPwa);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [isInstallingPwa, setIsInstallingPwa] = useState(false);
   const [pushState, setPushState] = useState<PushState>("idle");
   const [pushError, setPushError] = useState("");
   const [pushAlertState, setPushAlertState] = useState<PushAlertState>("idle");
@@ -469,12 +470,14 @@ export function ChatWidgetClient() {
       event.preventDefault();
       setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
       setShowInstallHelp(false);
+      setIsInstallingPwa(false);
     };
 
     const handleAppInstalled = () => {
       setDeferredInstallPrompt(null);
       setIsPwaInstalled(true);
       setShowInstallHelp(false);
+      setIsInstallingPwa(false);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -764,19 +767,27 @@ export function ChatWidgetClient() {
   };
 
   const handleInstallApp = async () => {
+    setIsInstallingPwa(true);
+    setShowInstallHelp(false);
+
     if (!deferredInstallPrompt) {
       setShowInstallHelp(true);
+      window.setTimeout(() => setIsInstallingPwa(false), 700);
       return;
     }
 
-    await deferredInstallPrompt.prompt();
-    const choice = await deferredInstallPrompt.userChoice;
+    try {
+      await deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
 
-    setDeferredInstallPrompt(null);
-    setShowInstallHelp(choice.outcome !== "accepted");
+      setDeferredInstallPrompt(null);
+      setShowInstallHelp(choice.outcome !== "accepted");
 
-    if (choice.outcome === "accepted") {
-      setIsPwaInstalled(true);
+      if (choice.outcome === "accepted") {
+        setIsPwaInstalled(true);
+      }
+    } finally {
+      setIsInstallingPwa(false);
     }
   };
 
@@ -1091,14 +1102,24 @@ export function ChatWidgetClient() {
             &quot;Adicionar a tela inicial&quot;.
           </small>
         ) : null}
+        {isInstallingPwa ? (
+          <small className={styles.installStatus}>
+            Preparando instalacao no celular...
+          </small>
+        ) : null}
       </div>
-      <button type="button" onClick={handleInstallApp}>
+      <button
+        type="button"
+        className={isInstallingPwa ? styles.installingButton : ""}
+        disabled={isInstallingPwa}
+        onClick={handleInstallApp}
+      >
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <path d="M12 3v12" />
           <path d="m7 10 5 5 5-5" />
           <path d="M5 21h14" />
         </svg>
-        Instalar
+        {isInstallingPwa ? "Instalando..." : "Instalar"}
       </button>
     </aside>
   ) : null;
