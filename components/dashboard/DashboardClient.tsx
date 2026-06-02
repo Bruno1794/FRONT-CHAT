@@ -26,6 +26,7 @@ import {
   reopenConversation,
   sendBroadcastNotice,
   sendMessage,
+  subscribeAdminToPushAlert,
   subscribeAdminToPush,
   updateMessage,
   uploadFile,
@@ -64,6 +65,36 @@ type BeforeInstallPromptEvent = Event & {
 type PushState = "idle" | "unsupported" | "blocked" | "ready" | "subscribing" | "active" | "error";
 
 const ADMIN_PUSH_ENABLED_KEY = "suportesync.adminPushEnabled";
+const PUSHALERT_SCRIPT_URL = process.env.NEXT_PUBLIC_PUSHALERT_SCRIPT_URL ?? "";
+
+type PushAlertQueueItem = [string, (...args: unknown[]) => void];
+
+type PushAlertSuccessResult = {
+  subscriber_id?: string;
+  alreadySubscribed?: boolean;
+};
+
+type PushAlertFailureResult = {
+  status?: number;
+};
+
+type PushAlertInfo = {
+  status?: number;
+  subs_id?: string;
+};
+
+type PushAlertApi = {
+  subs_id?: string;
+  forceSubscribe?: () => void;
+  getSubsInfo?: () => PushAlertInfo;
+};
+
+declare global {
+  interface Window {
+    pushalertbyiw?: PushAlertQueueItem[];
+    PushAlertCo?: PushAlertApi;
+  }
+}
 
 function isRunningInstalledPwa() {
   if (typeof window === "undefined") {
@@ -112,17 +143,126 @@ async function subscribeBrowserToPush(registration: ServiceWorkerRegistration, p
   });
 }
 
-async function registerAdminPushSubscription(token: string) {
-  const config = await getPushConfig();
-
-  if (!config.enabled || !config.publicKey) {
-    throw new Error("Push nao esta configurado na API.");
+async function loadPushAlertScript() {
+  if (!PUSHALERT_SCRIPT_URL || window.PushAlertCo) {
+    return;
   }
 
-  const registration = await getServiceWorkerRegistration();
-  const subscription = await subscribeBrowserToPush(registration, config.publicKey);
+  const existingScript = document.querySelector<HTMLScriptElement>(
+    `script[src="${PUSHALERT_SCRIPT_URL}"]`,
+  );
 
-  await subscribeAdminToPush(token, { subscription: subscription.toJSON() });
+  if (existingScript) {
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+
+    script.async = true;
+    script.src = PUSHALERT_SCRIPT_URL;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Falha ao carregar PushAlert."));
+    document.head.appendChild(script);
+  });
+}
+
+async function waitForPushAlertReady() {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    if (window.PushAlertCo || window.pushalertbyiw) {
+      return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 200));
+  }
+
+  throw new Error("PushAlert nao ficou pronto.");
+}
+
+function getPushAlertSubscriberId() {
+  const api = window.PushAlertCo;
+  const info = api?.getSubsInfo?.();
+
+  return api?.subs_id || info?.subs_id || null;
+}
+
+async function registerAdminPushAlertSubscription(token: string) {
+  if (!PUSHALERT_SCRIPT_URL) {
+    return false;
+  }
+
+  await loadPushAlertScript();
+  await waitForPushAlertReady();
+
+  const currentSubscriberId = getPushAlertSubscriberId();
+
+  if (currentSubscriberId) {
+    await subscribeAdminToPushAlert(token, { subscriber_id: currentSubscriberId });
+    return true;
+  }
+
+  const subscriberId = await new Promise<string>((resolve, reject) => {
+    window.pushalertbyiw = window.pushalertbyiw || [];
+    window.pushalertbyiw.push([
+      "onSuccess",
+      (result: unknown) => {
+        const successResult = result as PushAlertSuccessResult;
+        const nextSubscriberId =
+          successResult.subscriber_id || getPushAlertSubscriberId();
+
+        if (nextSubscriberId) {
+          resolve(nextSubscriberId);
+          return;
+        }
+
+        reject(new Error("PushAlert nao retornou o subscriber_id."));
+      },
+    ]);
+    window.pushalertbyiw.push([
+      "onFailure",
+      (result: unknown) => {
+        const failureResult = result as PushAlertFailureResult;
+        reject(new Error(`PushAlert falhou${failureResult.status ? ` (${failureResult.status})` : ""}.`));
+      },
+    ]);
+    window.PushAlertCo?.forceSubscribe?.();
+  });
+
+  await subscribeAdminToPushAlert(token, { subscriber_id: subscriberId });
+  return true;
+}
+
+async function registerAdminPushSubscription(token: string) {
+  let registered = false;
+  const errors: string[] = [];
+
+  if ("Notification" in window && "serviceWorker" in navigator && "PushManager" in window) {
+    try {
+      const config = await getPushConfig();
+
+      if (!config.enabled || !config.publicKey) {
+        throw new Error("Push nao esta configurado na API.");
+      }
+
+      const registration = await getServiceWorkerRegistration();
+      const subscription = await subscribeBrowserToPush(registration, config.publicKey);
+
+      await subscribeAdminToPush(token, { subscription: subscription.toJSON() });
+      registered = true;
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "WebPush falhou.");
+    }
+  }
+
+  try {
+    registered = (await registerAdminPushAlertSubscription(token)) || registered;
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "PushAlert falhou.");
+  }
+
+  if (!registered) {
+    throw new Error(errors.join(" "));
+  }
 }
 
 export function DashboardClient() {
@@ -572,17 +712,22 @@ export function DashboardClient() {
     }
 
     queueMicrotask(() => {
-      if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      const supportsWebPush =
+        "Notification" in window &&
+        "serviceWorker" in navigator &&
+        "PushManager" in window;
+
+      if (!supportsWebPush && !PUSHALERT_SCRIPT_URL) {
         setPushState("unsupported");
         return;
       }
 
-      if (Notification.permission === "denied") {
+      if ("Notification" in window && Notification.permission === "denied") {
         setPushState("blocked");
         return;
       }
 
-      if (Notification.permission === "granted") {
+      if ("Notification" in window && Notification.permission === "granted") {
         setPushState("ready");
         return;
       }
@@ -662,13 +807,18 @@ export function DashboardClient() {
       return;
     }
 
-    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    const supportsWebPush =
+      "Notification" in window &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window;
+
+    if (!supportsWebPush && !PUSHALERT_SCRIPT_URL) {
       setPushState("unsupported");
       setPushError("Este navegador nao suporta notificacoes push.");
       return;
     }
 
-    if (Notification.permission === "denied") {
+    if ("Notification" in window && Notification.permission === "denied") {
       setPushState("blocked");
       setPushError("As notificacoes estao bloqueadas neste navegador.");
       return;
@@ -679,9 +829,11 @@ export function DashboardClient() {
 
     try {
       const permission =
-        Notification.permission === "granted"
+        "Notification" in window && Notification.permission === "granted"
           ? "granted"
-          : await Notification.requestPermission();
+          : "Notification" in window
+            ? await Notification.requestPermission()
+            : "granted";
 
       if (permission !== "granted") {
         setPushState("ready");

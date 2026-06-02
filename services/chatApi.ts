@@ -140,6 +140,17 @@ export function subscribeAdminToPush(
   });
 }
 
+export function subscribeAdminToPushAlert(
+  token: string,
+  payload: { subscriber_id: string },
+) {
+  return apiFetch<{ success: boolean }>("/push/admin/pushalert/subscribe", {
+    method: "POST",
+    token,
+    json: payload,
+  });
+}
+
 export function subscribeToPushAlert(payload: {
   codigo: string;
   conversation_id: number;
