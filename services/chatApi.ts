@@ -151,6 +151,17 @@ export function subscribeAdminToPushAlert(
   });
 }
 
+export function testAdminPush(token: string) {
+  return apiFetch<{
+    success: boolean;
+    webpush_subscriptions: number;
+    pushalert_subscriptions: number;
+  }>("/push/admin/test", {
+    method: "POST",
+    token,
+  });
+}
+
 export function subscribeToPushAlert(payload: {
   codigo: string;
   conversation_id: number;

@@ -28,6 +28,7 @@ import {
   sendMessage,
   subscribeAdminToPushAlert,
   subscribeAdminToPush,
+  testAdminPush,
   updateMessage,
   uploadFile,
 } from "@/services/chatApi";
@@ -333,6 +334,7 @@ export function DashboardClient() {
       : "idle",
   );
   const [pushError, setPushError] = useState("");
+  const [pushFeedback, setPushFeedback] = useState("");
   const [isPushAlertKnownActive, setIsPushAlertKnownActive] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -864,6 +866,7 @@ export function DashboardClient() {
 
     setPushState("subscribing");
     setPushError("");
+    setPushFeedback("");
 
     try {
       const permission =
@@ -902,6 +905,7 @@ export function DashboardClient() {
 
     setPushState("subscribing");
     setPushError("");
+    setPushFeedback("");
 
     try {
       const pushAlertRegistered = await registerAdminPushAlertSubscription(token);
@@ -919,6 +923,28 @@ export function DashboardClient() {
       setPushState("ready");
       setPushError(
         err instanceof Error ? err.message : "Nao foi possivel ativar PushAlert.",
+      );
+    }
+  };
+
+  const handleTestAdminPush = async () => {
+    if (!token) {
+      return;
+    }
+
+    setPushError("");
+    setPushFeedback("Enviando teste...");
+
+    try {
+      const result = await testAdminPush(token);
+
+      setPushFeedback(
+        `Teste enviado. WebPush: ${result.webpush_subscriptions}. PushAlert: ${result.pushalert_subscriptions}.`,
+      );
+    } catch (err) {
+      setPushFeedback("");
+      setPushError(
+        err instanceof Error ? err.message : "Nao foi possivel testar notificacoes.",
       );
     }
   };
@@ -1520,11 +1546,12 @@ export function DashboardClient() {
           <aside className={styles.adminPrompt}>
             <div>
               <strong>Atendimento no celular</strong>
-              <p>
-                Instale o painel e ative notificacoes para receber novas mensagens
-                de clientes.
-              </p>
-              {pushError ? <small>{pushError}</small> : null}
+      <p>
+        Instale o painel e ative notificacoes para receber novas mensagens
+        de clientes.
+      </p>
+      {pushFeedback ? <small>{pushFeedback}</small> : null}
+      {pushError ? <small>{pushError}</small> : null}
             </div>
             <div className={styles.adminPromptActions}>
               {shouldShowInstallPrompt ? (
@@ -1554,6 +1581,11 @@ export function DashboardClient() {
                     : isPushAlertKnownActive
                       ? "Atualizar celular"
                       : "Ativar no celular"}
+                </button>
+              ) : null}
+              {token ? (
+                <button type="button" onClick={handleTestAdminPush}>
+                  Testar
                 </button>
               ) : null}
             </div>
