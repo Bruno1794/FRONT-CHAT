@@ -181,6 +181,7 @@ export function DashboardClient() {
   >({});
   const selectedIdRef = useRef<number | null>(null);
   const messagesRequestRef = useRef(0);
+  const mobileThreadHistoryRef = useRef(false);
   const socket = useSocket(token ?? undefined);
 
   const selectedConversation = useMemo(
@@ -528,6 +529,22 @@ export function DashboardClient() {
 
     return () => window.removeEventListener("resize", openChatsOnMobile);
   }, [hasExplicitTab, router]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (!isMobileThreadOpen) {
+        return;
+      }
+
+      mobileThreadHistoryRef.current = false;
+      setIsMobileThreadOpen(false);
+      setIsCustomerModalOpen(false);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [isMobileThreadOpen]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -1182,6 +1199,13 @@ export function DashboardClient() {
   };
 
   const handleSelectConversation = (conversation: Conversation) => {
+    const isMobile = window.matchMedia("(max-width: 820px)").matches;
+
+    if (isMobile && !isMobileThreadOpen) {
+      window.history.pushState({ suporteSyncThread: true }, "", window.location.href);
+      mobileThreadHistoryRef.current = true;
+    }
+
     setSelectedId(conversation.id);
     setIsMobileThreadOpen(true);
     setThreadSearch("");
@@ -1408,6 +1432,11 @@ export function DashboardClient() {
                 type="button"
                 aria-label="Voltar para conversas"
                 onClick={() => {
+                  if (mobileThreadHistoryRef.current) {
+                    window.history.back();
+                    return;
+                  }
+
                   setIsMobileThreadOpen(false);
                   setIsCustomerModalOpen(false);
                 }}
