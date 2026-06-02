@@ -30,6 +30,9 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
   const bubbleRef = useRef<HTMLDivElement | null>(null);
   const longPressTimeoutRef = useRef<number | null>(null);
   const isDeleted = Boolean(message.deleted_at);
+  const hasAudioAttachment = Boolean(
+    !isDeleted && message.attachments?.some((attachment) => attachment.mime_type.startsWith("audio/")),
+  );
   const canManage = isMe && message.id > 0 && !isDeleted;
   const reactionGroups = Object.values(
     (message.reactions ?? []).reduce<Record<string, { emoji: string; count: number }>>(
@@ -121,6 +124,7 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
           ref={bubbleRef}
           className={`${styles.bubble} ${onReact && message.id > 0 ? styles.reactable : ""} ${
             isDeleted ? styles.deletedBubble : ""
+          } ${hasAudioAttachment ? styles.audioBubble : ""
           }`}
           role={onReact && message.id > 0 ? "button" : undefined}
           tabIndex={onReact && message.id > 0 ? 0 : undefined}
