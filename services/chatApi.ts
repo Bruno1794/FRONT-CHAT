@@ -117,6 +117,17 @@ export function subscribeToPush(payload: {
   });
 }
 
+export function subscribeToPushAlert(payload: {
+  codigo: string;
+  conversation_id: number;
+  subscriber_id: string;
+}) {
+  return apiFetch<{ success: boolean }>("/push/pushalert/subscribe", {
+    method: "POST",
+    json: payload,
+  });
+}
+
 export function unsubscribeFromPush(payload: {
   endpoint?: string | null;
   subscription?: PushSubscriptionJSON | null;

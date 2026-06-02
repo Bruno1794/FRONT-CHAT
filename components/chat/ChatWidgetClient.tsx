@@ -15,6 +15,7 @@ import {
   markMessageAsRead,
   reactToMessage,
   sendMessage,
+  subscribeToPushAlert,
   subscribeToPush,
   updateMessage,
   uploadFile,
@@ -33,6 +34,8 @@ import styles from "@/app/chat/chat.module.css";
 
 const CLIENT_CHAT_SESSION_KEY = "suportesync.clientChat";
 const CLIENT_PUSH_ENABLED_KEY = "suportesync.clientPushEnabled";
+const CLIENT_PUSHALERT_ENABLED_KEY = "suportesync.clientPushAlertEnabled";
+const PUSHALERT_SCRIPT_URL = process.env.NEXT_PUBLIC_PUSHALERT_SCRIPT_URL ?? "";
 
 type WindowWithAudioContext = Window & {
   AudioContext?: typeof AudioContext;
@@ -51,12 +54,42 @@ type NavigatorWithStandalone = Navigator & {
   standalone?: boolean;
 };
 
+type PushAlertQueueItem = [string, (...args: unknown[]) => void];
+
+type PushAlertSuccessResult = {
+  subscriber_id?: string;
+  alreadySubscribed?: boolean;
+};
+
+type PushAlertFailureResult = {
+  status?: number;
+};
+
+type PushAlertInfo = {
+  status?: number;
+  subs_id?: string;
+};
+
+type PushAlertApi = {
+  subs_id?: string;
+  forceSubscribe?: () => void;
+  getSubsInfo?: () => PushAlertInfo;
+};
+
+declare global {
+  interface Window {
+    pushalertbyiw?: PushAlertQueueItem[];
+    PushAlertCo?: PushAlertApi;
+  }
+}
+
 type StoredClientChat = {
   code: string;
   conversation: Conversation;
 };
 
 type PushState = "idle" | "unsupported" | "blocked" | "ready" | "subscribing" | "active" | "error";
+type PushAlertState = "idle" | "loading" | "active" | "error";
 
 function buildStartedMessage(conversationId: number): Message {
   return {
@@ -137,6 +170,52 @@ async function subscribeBrowserToPush(registration: ServiceWorkerRegistration, p
   }
 }
 
+function loadPushAlertScript() {
+  if (!PUSHALERT_SCRIPT_URL) {
+    return Promise.reject(new Error("Script do PushAlert nao configurado."));
+  }
+
+  if (window.PushAlertCo) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[data-pushalert="true"]`,
+    );
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Falha ao carregar PushAlert.")), {
+        once: true,
+      });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = PUSHALERT_SCRIPT_URL;
+    script.async = true;
+    script.dataset.pushalert = "true";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Falha ao carregar PushAlert."));
+    document.head.appendChild(script);
+  });
+}
+
+function waitForPushAlertReady() {
+  return new Promise<void>((resolve) => {
+    window.pushalertbyiw = window.pushalertbyiw || [];
+    window.pushalertbyiw.push(["onReady", () => resolve()]);
+    window.setTimeout(resolve, 2000);
+  });
+}
+
+function getPushAlertSubscriberId() {
+  const info = window.PushAlertCo?.getSubsInfo?.();
+
+  return info?.subs_id || window.PushAlertCo?.subs_id || "";
+}
+
 function readStoredClientChat(initialCode: string) {
   if (typeof window === "undefined") {
     return null;
@@ -209,6 +288,13 @@ export function ChatWidgetClient() {
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [pushState, setPushState] = useState<PushState>("idle");
   const [pushError, setPushError] = useState("");
+  const [pushAlertState, setPushAlertState] = useState<PushAlertState>("idle");
+  const [pushAlertError, setPushAlertError] = useState("");
+  const [isPushAlertKnownActive, setIsPushAlertKnownActive] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      localStorage.getItem(CLIENT_PUSHALERT_ENABLED_KEY) === "true",
+  );
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -220,6 +306,11 @@ export function ChatWidgetClient() {
   const shouldShowInstallPrompt = !isPwaInstalled;
   const shouldShowPushPrompt =
     Boolean(conversation) && !["active", "unsupported", "blocked"].includes(pushState);
+  const shouldShowPushAlertPrompt =
+    Boolean(conversation) &&
+    Boolean(PUSHALERT_SCRIPT_URL) &&
+    pushAlertState !== "active" &&
+    !isPushAlertKnownActive;
 
   const normalizeSearchValue = (value?: string | number | null) =>
     String(value ?? "")
@@ -683,6 +774,92 @@ export function ChatWidgetClient() {
     }
   };
 
+  const handleEnablePushAlertNotifications = async () => {
+    if (!conversation) {
+      return;
+    }
+
+    setPushAlertError("");
+    setPushAlertState("loading");
+
+    try {
+      await loadPushAlertScript();
+      await waitForPushAlertReady();
+
+      const currentSubscriberId = getPushAlertSubscriberId();
+
+      if (currentSubscriberId) {
+        await subscribeToPushAlert({
+          codigo: codigoAcesso,
+          conversation_id: conversation.id,
+          subscriber_id: currentSubscriberId,
+        });
+        localStorage.setItem(CLIENT_PUSHALERT_ENABLED_KEY, "true");
+        setIsPushAlertKnownActive(true);
+        setPushAlertState("active");
+        return;
+      }
+
+      const subscriberId = await new Promise<string>((resolve, reject) => {
+        window.pushalertbyiw = window.pushalertbyiw || [];
+        window.pushalertbyiw.push([
+          "onSuccess",
+          (result: unknown) => {
+            const successResult = result as PushAlertSuccessResult;
+            const nextSubscriberId =
+              successResult.subscriber_id || getPushAlertSubscriberId();
+
+            if (nextSubscriberId) {
+              resolve(nextSubscriberId);
+              return;
+            }
+
+            reject(new Error("PushAlert nao retornou o subscriber_id."));
+          },
+        ]);
+        window.pushalertbyiw.push([
+          "onFailure",
+          (result: unknown) => {
+            const failureResult = result as PushAlertFailureResult;
+            reject(
+              new Error(
+                failureResult.status === -1
+                  ? "Notificacoes bloqueadas neste navegador."
+                  : "Assinatura PushAlert cancelada ou indisponivel.",
+              ),
+            );
+          },
+        ]);
+
+        window.PushAlertCo?.forceSubscribe?.();
+        window.setTimeout(() => {
+          const fallbackSubscriberId = getPushAlertSubscriberId();
+
+          if (fallbackSubscriberId) {
+            resolve(fallbackSubscriberId);
+            return;
+          }
+
+          reject(new Error("PushAlert nao concluiu a assinatura."));
+        }, 15000);
+      });
+
+      await subscribeToPushAlert({
+        codigo: codigoAcesso,
+        conversation_id: conversation.id,
+        subscriber_id: subscriberId,
+      });
+      localStorage.setItem(CLIENT_PUSHALERT_ENABLED_KEY, "true");
+      setIsPushAlertKnownActive(true);
+      setPushAlertState("active");
+    } catch (err) {
+      setPushAlertError(
+        err instanceof Error ? err.message : "Nao foi possivel ativar via PushAlert.",
+      );
+      setPushAlertState("error");
+    }
+  };
+
   const getMessageType = (attachments: Attachment[], text: string): MessageType => {
     if (attachments.length === 0) {
       return "TEXT";
@@ -882,6 +1059,26 @@ export function ChatWidgetClient() {
       </button>
     </aside>
   ) : null;
+  const pushAlertPrompt = shouldShowPushAlertPrompt ? (
+    <aside className={styles.notificationPrompt}>
+      <div>
+        <strong>Teste alternativo PushAlert</strong>
+        <p>Use esta opcao se o push nativo do navegador continuar falhando.</p>
+        {pushAlertError ? <small>{pushAlertError}</small> : null}
+      </div>
+      <button
+        type="button"
+        disabled={pushAlertState === "loading"}
+        onClick={handleEnablePushAlertNotifications}
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+          <path d="M10 21h4" />
+        </svg>
+        {pushAlertState === "loading" ? "Ativando..." : "Testar"}
+      </button>
+    </aside>
+  ) : null;
 
   return (
     <main
@@ -928,6 +1125,7 @@ export function ChatWidgetClient() {
         {error ? <p className={styles.error}>{error}</p> : null}
         {conversation ? installPrompt : null}
         {conversation ? pushPrompt : null}
+        {conversation ? pushAlertPrompt : null}
 
         {conversation && isThreadSearchOpen ? (
           <div className={styles.threadSearchBar}>
