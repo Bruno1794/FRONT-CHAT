@@ -2,6 +2,7 @@ import { apiFetch } from "@/services/api";
 import type {
   Attachment,
   AuthResponse,
+  BroadcastNoticeResult,
   Conversation,
   ConversationDetails,
   ConversationStatus,
@@ -43,6 +44,17 @@ export function getConversations(token: string, search?: string) {
   const query = params.toString();
   return apiFetch<Conversation[]>(`/conversations${query ? `?${query}` : ""}`, {
     token,
+  });
+}
+
+export function sendBroadcastNotice(
+  token: string,
+  payload: { title?: string; message: string },
+) {
+  return apiFetch<BroadcastNoticeResult>("/broadcasts/notice", {
+    method: "POST",
+    token,
+    json: payload,
   });
 }
 

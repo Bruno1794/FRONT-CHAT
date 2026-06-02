@@ -23,6 +23,7 @@ import {
   markMessageAsRead,
   reactToMessage,
   reopenConversation,
+  sendBroadcastNotice,
   sendMessage,
   updateMessage,
   uploadFile,
@@ -69,6 +70,11 @@ export function DashboardClient() {
   const [isSending, setIsSending] = useState(false);
   const [isMobileThreadOpen, setIsMobileThreadOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [broadcastTitle, setBroadcastTitle] = useState("Aviso do suporte");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastFeedback, setBroadcastFeedback] = useState("");
+  const [isBroadcastSending, setIsBroadcastSending] = useState(false);
   const [isThreadSearchOpen, setIsThreadSearchOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
   const [activeThreadMatchIndex, setActiveThreadMatchIndex] = useState(0);
@@ -696,6 +702,34 @@ export function DashboardClient() {
     }
   };
 
+  const handleSendBroadcastNotice = async () => {
+    if (!token || !broadcastMessage.trim()) {
+      setBroadcastFeedback("Digite a mensagem do aviso antes de disparar.");
+      return;
+    }
+
+    setIsBroadcastSending(true);
+    setBroadcastFeedback("");
+
+    try {
+      const result = await sendBroadcastNotice(token, {
+        title: broadcastTitle.trim() || "Aviso do suporte",
+        message: broadcastMessage.trim(),
+      });
+
+      setBroadcastMessage("");
+      setBroadcastFeedback(
+        `Aviso enviado para ${result.total_conversations} conversas. Online: ${result.online_conversations}. Push: ${result.push_conversations}.`,
+      );
+    } catch (err) {
+      setBroadcastFeedback(
+        err instanceof Error ? err.message : "Falha ao disparar aviso.",
+      );
+    } finally {
+      setIsBroadcastSending(false);
+    }
+  };
+
   const getMessageType = (attachments: Attachment[], text: string): MessageType => {
     if (attachments.length === 0) {
       return "TEXT";
@@ -986,9 +1020,14 @@ export function DashboardClient() {
                 <h2>Conversas</h2>
                 <span>{conversations.length} atendimentos</span>
               </div>
-              <button type="button" onClick={handleLogout}>
-                Sair
-              </button>
+              <div className={styles.listHeaderActions}>
+                <button type="button" onClick={() => setIsBroadcastModalOpen(true)}>
+                  Aviso
+                </button>
+                <button type="button" onClick={handleLogout}>
+                  Sair
+                </button>
+              </div>
             </div>
             <div className={styles.search}>
               <input
@@ -1312,6 +1351,77 @@ export function DashboardClient() {
               onClose={() => setEditingMessage(null)}
               onSave={handleSaveEditedMessage}
             />
+          ) : null}
+          {isBroadcastModalOpen ? (
+            <div
+              className={styles.modalOverlay}
+              role="presentation"
+              onMouseDown={() => setIsBroadcastModalOpen(false)}
+            >
+              <section
+                className={`${styles.shortcutModal} ${styles.broadcastModal}`}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Disparar aviso"
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <header>
+                  <div>
+                    <span>Disparo em massa</span>
+                    <h2>Aviso para clientes</h2>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Fechar aviso"
+                    onClick={() => setIsBroadcastModalOpen(false)}
+                  >
+                    X
+                  </button>
+                </header>
+                <p className={styles.broadcastHelp}>
+                  Esse aviso aparece nos chats ativos e envia notificacao para clientes
+                  sem a conversa aberta. Ele nao fica salvo no historico.
+                </p>
+                <label>
+                  <span>Titulo</span>
+                  <input
+                    value={broadcastTitle}
+                    onChange={(event) => setBroadcastTitle(event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>Mensagem</span>
+                  <textarea
+                    maxLength={600}
+                    placeholder="Digite o aviso que sera enviado para os clientes"
+                    value={broadcastMessage}
+                    onChange={(event) => setBroadcastMessage(event.target.value)}
+                  />
+                </label>
+                <div className={styles.broadcastCounter}>
+                  {broadcastMessage.trim().length}/600 caracteres
+                </div>
+                {broadcastFeedback ? (
+                  <p className={styles.broadcastFeedback}>{broadcastFeedback}</p>
+                ) : null}
+                <footer>
+                  <button
+                    type="button"
+                    disabled={isBroadcastSending}
+                    onClick={() => setIsBroadcastModalOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isBroadcastSending || !broadcastMessage.trim()}
+                    onClick={handleSendBroadcastNotice}
+                  >
+                    {isBroadcastSending ? "Enviando..." : "Disparar aviso"}
+                  </button>
+                </footer>
+              </section>
+            </div>
           ) : null}
         </div>
         ) : null}

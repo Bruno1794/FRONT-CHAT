@@ -532,6 +532,66 @@
   stroke-linejoin: round;
 }
 
+.broadcastNotice {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(0, 122, 77, 0.14);
+  padding: 12px 14px;
+  background: #fff8e8;
+  color: #3f3211;
+  animation: panelIn 180ms var(--ease-out);
+}
+
+.broadcastIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: #f7dc8c;
+  color: #6f4d00;
+}
+
+.broadcastIcon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.broadcastNotice strong {
+  display: block;
+  font-size: 0.86rem;
+}
+
+.broadcastNotice p {
+  margin: 3px 0 0;
+  white-space: pre-wrap;
+  color: #5f4a12;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.broadcastNotice button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(111, 77, 0, 0.12);
+  color: #5d4100;
+  cursor: pointer;
+  font-weight: 900;
+}
+
 .startPanel .installPrompt,
 .startPanel .notificationPrompt {
   width: 100%;
@@ -732,7 +792,8 @@
   }
 
   .installPrompt,
-  .notificationPrompt {
+  .notificationPrompt,
+  .broadcastNotice {
     grid-template-columns: 1fr;
     gap: 9px;
     padding: 10px;
@@ -741,6 +802,12 @@
   .installPrompt button,
   .notificationPrompt button {
     width: 100%;
+  }
+
+  .broadcastNotice button {
+    position: absolute;
+    right: 10px;
+    margin-top: 0;
   }
 
   .messages {

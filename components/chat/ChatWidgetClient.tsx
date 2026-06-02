@@ -23,6 +23,7 @@ import {
 } from "@/services/chatApi";
 import type {
   Attachment,
+  BroadcastNotice,
   Conversation,
   ConversationPresence,
   Message,
@@ -308,6 +309,7 @@ export function ChatWidgetClient() {
   const [pushError, setPushError] = useState("");
   const [pushAlertState, setPushAlertState] = useState<PushAlertState>("idle");
   const [pushAlertError, setPushAlertError] = useState("");
+  const [broadcastNotice, setBroadcastNotice] = useState<BroadcastNotice | null>(null);
   const [isPushAlertKnownActive, setIsPushAlertKnownActive] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -727,6 +729,20 @@ export function ChatWidgetClient() {
       setPresence(nextPresence);
     };
 
+    const handleBroadcastNotice = (notice: BroadcastNotice) => {
+      if (notice.conversation_id !== conversation.id) {
+        return;
+      }
+
+      setBroadcastNotice(notice);
+      playNotificationSound();
+      window.setTimeout(() => {
+        setBroadcastNotice((current) =>
+          current?.id === notice.id ? null : current,
+        );
+      }, 12000);
+    };
+
     joinConversation();
     const presenceIntervalId = window.setInterval(pingPresence, 5000);
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -740,6 +756,7 @@ export function ChatWidgetClient() {
     socket.on("message_updated", handleMessageUpdated);
     socket.on("conversation_updated", handleConversationUpdated);
     socket.on("conversation_presence", handleConversationPresence);
+    socket.on("broadcast_notice", handleBroadcastNotice);
 
     return () => {
       window.clearInterval(presenceIntervalId);
@@ -755,6 +772,7 @@ export function ChatWidgetClient() {
       socket.off("message_updated", handleMessageUpdated);
       socket.off("conversation_updated", handleConversationUpdated);
       socket.off("conversation_presence", handleConversationPresence);
+      socket.off("broadcast_notice", handleBroadcastNotice);
     };
   }, [
     codigoAcesso,
@@ -1311,6 +1329,27 @@ export function ChatWidgetClient() {
         {iosInstallModal}
         {conversation ? pushPrompt : null}
         {conversation ? pushAlertPrompt : null}
+        {conversation && broadcastNotice ? (
+          <aside className={styles.broadcastNotice}>
+            <span className={styles.broadcastIcon}>
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M3 11v2a2 2 0 0 0 2 2h2l4 4v-5l8-3V8l-8-3v5H5a2 2 0 0 0-2 2Z" />
+                <path d="M21 9v2" />
+              </svg>
+            </span>
+            <div>
+              <strong>{broadcastNotice.title}</strong>
+              <p>{broadcastNotice.message}</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Fechar aviso"
+              onClick={() => setBroadcastNotice(null)}
+            >
+              X
+            </button>
+          </aside>
+        ) : null}
 
         {conversation && isThreadSearchOpen ? (
           <div className={styles.threadSearchBar}>

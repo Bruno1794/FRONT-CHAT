@@ -408,6 +408,39 @@
   color: #263631;
 }
 
+.broadcastModal textarea {
+  min-height: 170px;
+  line-height: 1.45;
+}
+
+.broadcastHelp {
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #eef7f3;
+  color: #355047;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.broadcastCounter {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.broadcastFeedback {
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #f0f9ff;
+  color: #0b5f8a;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .conversationList {
   display: flex;
   min-width: 0;
@@ -445,6 +478,13 @@
   margin-top: 3px;
   color: #6b7280;
   font-size: 0.76rem;
+}
+
+.listHeaderActions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
 }
 
 .listHeader button,

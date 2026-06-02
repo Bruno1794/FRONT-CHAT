@@ -92,6 +92,25 @@ export interface ConversationPresence {
   updated_at: string;
 }
 
+export interface BroadcastNotice {
+  id: string;
+  conversation_id: number;
+  title: string;
+  message: string;
+  created_at: string;
+  sender?: {
+    id: number;
+    nome: string;
+  };
+}
+
+export interface BroadcastNoticeResult {
+  success: boolean;
+  total_conversations: number;
+  online_conversations: number;
+  push_conversations: number;
+}
+
 export interface Cliente {
   id: string;
   nome: string;
