@@ -716,3 +716,15 @@
     padding: 20px;
   }
 }
+
+@media (max-width: 640px) {
+  :global(.ios-viewport) .page {
+    position: relative;
+    min-height: var(--app-height, 100svh);
+  }
+
+  :global(.ios-viewport) .chat {
+    height: var(--app-height, 100svh);
+    min-height: var(--app-height, 100svh);
+  }
+}

@@ -1279,6 +1279,14 @@
   }
 }
 
+@media (max-width: 820px) {
+  :global(.ios-viewport) .shell {
+    position: relative;
+    height: var(--app-height, 100svh);
+    min-height: var(--app-height, 100svh);
+  }
+}
+
 @keyframes searchPulse {
   0%,
   100% {
