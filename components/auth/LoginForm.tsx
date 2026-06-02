@@ -1,10 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
-import { saveAuthSession } from "@/services/authStorage";
+import { getAccessToken, saveAuthSession } from "@/services/authStorage";
 import { login } from "@/services/chatApi";
 import styles from "@/app/(auth)/login/login.module.css";
 
@@ -15,6 +15,12 @@ export function LoginForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (getAccessToken()) {
+      router.replace("/dashboard?tab=chats");
+    }
+  }, [router]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
@@ -23,7 +29,7 @@ export function LoginForm() {
     try {
       const session = await login(email, senha);
       saveAuthSession(session);
-      router.push("/dashboard?tab=chats");
+      router.replace("/dashboard?tab=chats");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao autenticar.");
     } finally {
