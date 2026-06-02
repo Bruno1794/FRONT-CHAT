@@ -97,11 +97,44 @@ async function getServiceWorkerRegistration() {
   const existingRegistration = await navigator.serviceWorker.getRegistration();
 
   if (existingRegistration) {
+    await existingRegistration.update().catch(() => undefined);
     return existingRegistration;
   }
 
   await navigator.serviceWorker.register("/sw.js");
   return navigator.serviceWorker.ready;
+}
+
+async function subscribeBrowserToPush(registration: ServiceWorkerRegistration, publicKey: string) {
+  const applicationServerKey = urlBase64ToUint8Array(publicKey);
+  const existingSubscription = await registration.pushManager.getSubscription();
+
+  if (existingSubscription) {
+    return existingSubscription;
+  }
+
+  try {
+    return await registration.pushManager.subscribe({
+      applicationServerKey,
+      userVisibleOnly: true,
+    });
+  } catch (firstError) {
+    const updatedRegistration = await navigator.serviceWorker.ready;
+    const staleSubscription = await updatedRegistration.pushManager.getSubscription();
+
+    if (staleSubscription) {
+      await staleSubscription.unsubscribe().catch(() => undefined);
+    }
+
+    try {
+      return await updatedRegistration.pushManager.subscribe({
+        applicationServerKey,
+        userVisibleOnly: true,
+      });
+    } catch {
+      throw firstError;
+    }
+  }
 }
 
 function readStoredClientChat(initialCode: string) {
@@ -630,13 +663,7 @@ export function ChatWidgetClient() {
       }
 
       const registration = await getServiceWorkerRegistration();
-      const existingSubscription = await registration.pushManager.getSubscription();
-      const subscription =
-        existingSubscription ??
-        (await registration.pushManager.subscribe({
-          applicationServerKey: urlBase64ToUint8Array(config.publicKey),
-          userVisibleOnly: true,
-        }));
+      const subscription = await subscribeBrowserToPush(registration, config.publicKey);
 
       await subscribeToPush({
         codigo: codigoAcesso,
@@ -648,9 +675,9 @@ export function ChatWidgetClient() {
       setPushState("active");
     } catch (err) {
       setPushError(
-        err instanceof Error
-          ? err.message
-          : "Nao foi possivel ativar as notificacoes.",
+        err instanceof Error && err.message
+          ? `Nao foi possivel ativar as notificacoes neste navegador. ${err.message}`
+          : "Nao foi possivel ativar as notificacoes neste navegador.",
       );
       setPushState("error");
     }
