@@ -130,7 +130,9 @@ export function DashboardClient() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") ?? "dashboard";
+  const activeTabParam = searchParams.get("tab");
+  const hasExplicitTab = searchParams.has("tab");
+  const activeTab = activeTabParam ?? "dashboard";
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -509,6 +511,23 @@ export function DashboardClient() {
       // Browsers can block audio until user interaction.
     }
   }, []);
+
+  useEffect(() => {
+    if (hasExplicitTab) {
+      return;
+    }
+
+    const openChatsOnMobile = () => {
+      if (window.matchMedia("(max-width: 820px)").matches) {
+        router.replace("/dashboard?tab=chats");
+      }
+    };
+
+    openChatsOnMobile();
+    window.addEventListener("resize", openChatsOnMobile);
+
+    return () => window.removeEventListener("resize", openChatsOnMobile);
+  }, [hasExplicitTab, router]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
