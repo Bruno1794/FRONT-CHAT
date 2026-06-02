@@ -382,11 +382,13 @@ export function DashboardClient() {
   const selectedPresence = selectedId ? conversationPresence[selectedId] : undefined;
   const isSelectedClientOnline = Boolean(selectedPresence?.clientes);
   const selectedClientLastSeen = selectedId ? clientLastSeen[selectedId] : undefined;
-  const shouldShowAdminPushPrompt =
-    Boolean(token) &&
-    (!["active", "unsupported", "blocked", "subscribing"].includes(pushState) ||
-      Boolean(PUSHALERT_SCRIPT_URL));
   const shouldShowInstallPrompt = Boolean(deferredInstallPrompt) && !isPwaInstalled;
+  const adminPushStatusText =
+    pushState === "active"
+      ? "WebPush ativo neste navegador."
+      : isPushAlertKnownActive
+        ? "PushAlert ativo para este usuario."
+        : "Use somente se trocar de celular ou limpar os dados do navegador.";
 
   const isActiveThreadVisible = useCallback(() => {
     if (activeTab !== "chats") {
@@ -1546,6 +1548,62 @@ export function DashboardClient() {
     <p className={styles.state}>Selecione uma conversa.</p>
   );
 
+  const notificationSettings = (
+    <section className={styles.notificationSettings}>
+      <div>
+        <span>Notificacoes</span>
+        <h2>Dispositivos do painel</h2>
+        <p>
+          Manutencao das notificacoes do painel administrativo. Esses botoes
+          ficam aqui para reativar ou testar o recebimento quando necessario.
+        </p>
+        <small>{adminPushStatusText}</small>
+        {pushFeedback ? (
+          <strong className={styles.notificationFeedback}>{pushFeedback}</strong>
+        ) : null}
+        {pushError ? (
+          <strong className={styles.notificationError}>{pushError}</strong>
+        ) : null}
+      </div>
+      <div className={styles.notificationActions}>
+        {shouldShowInstallPrompt ? (
+          <button type="button" onClick={handleInstallPwa}>
+            Instalar app
+          </button>
+        ) : null}
+        <button
+          type="button"
+          disabled={pushState === "subscribing"}
+          onClick={handleEnableAdminPush}
+        >
+          {pushState === "subscribing"
+            ? "Ativando..."
+            : pushState === "active"
+              ? "Atualizar WebPush"
+              : "Ativar notificacoes"}
+        </button>
+        {PUSHALERT_SCRIPT_URL ? (
+          <button
+            type="button"
+            disabled={pushState === "subscribing"}
+            onClick={handleEnableAdminPushAlert}
+          >
+            {pushState === "subscribing"
+              ? "Ativando..."
+              : isPushAlertKnownActive
+                ? "Atualizar celular"
+                : "Ativar no celular"}
+          </button>
+        ) : null}
+        {token ? (
+          <button type="button" onClick={handleTestAdminPush}>
+            Testar notificacao
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+
   return (
     <main className={styles.shell}>
       <Sidebar hideMobileMenuButton={activeTab === "chats" && isMobileThreadOpen} />
@@ -1554,56 +1612,6 @@ export function DashboardClient() {
         onClick={unlockNotificationSound}
         onKeyDown={unlockNotificationSound}
       >
-        {shouldShowInstallPrompt || shouldShowAdminPushPrompt ? (
-          <aside className={styles.adminPrompt}>
-            <div>
-              <strong>Atendimento no celular</strong>
-      <p>
-        Instale o painel e ative notificacoes para receber novas mensagens
-        de clientes.
-      </p>
-      {pushFeedback ? <small>{pushFeedback}</small> : null}
-      {pushError ? <small>{pushError}</small> : null}
-            </div>
-            <div className={styles.adminPromptActions}>
-              {shouldShowInstallPrompt ? (
-                <button type="button" onClick={handleInstallPwa}>
-                  Instalar
-                </button>
-              ) : null}
-              {!["active", "unsupported", "blocked", "subscribing"].includes(
-                pushState,
-              ) ? (
-                <button
-                  type="button"
-                  disabled={pushState === "subscribing"}
-                  onClick={handleEnableAdminPush}
-                >
-                  {pushState === "subscribing" ? "Ativando..." : "Ativar notificacoes"}
-                </button>
-              ) : null}
-              {PUSHALERT_SCRIPT_URL ? (
-                <button
-                  type="button"
-                  disabled={pushState === "subscribing"}
-                  onClick={handleEnableAdminPushAlert}
-                >
-                  {pushState === "subscribing"
-                    ? "Ativando..."
-                    : isPushAlertKnownActive
-                      ? "Atualizar celular"
-                      : "Ativar no celular"}
-                </button>
-              ) : null}
-              {token ? (
-                <button type="button" onClick={handleTestAdminPush}>
-                  Testar
-                </button>
-              ) : null}
-            </div>
-          </aside>
-        ) : null}
-
         {activeTab === "dashboard" ? (
           <div className={styles.placeholderView}>
             <span>Dashboard</span>
@@ -1635,7 +1643,11 @@ export function DashboardClient() {
         ) : null}
 
         {activeTab === "settings" ? (
-          <ShortcutSettings token={token} user={user} />
+          <ShortcutSettings
+            token={token}
+            user={user}
+            notificationContent={notificationSettings}
+          />
         ) : null}
 
         {activeTab === "chats" ? (

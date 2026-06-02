@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createShortcut,
@@ -14,6 +14,7 @@ import styles from "@/app/dashboard/dashboard.module.css";
 type Props = {
   token: string | null;
   user: User | null;
+  notificationContent?: ReactNode;
 };
 
 type FormState = {
@@ -32,7 +33,7 @@ const emptyForm: FormState = {
   global: false,
 };
 
-export function ShortcutSettings({ token, user }: Props) {
+export function ShortcutSettings({ token, user, notificationContent }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const shouldStartWithNewShortcut = searchParams.get("shortcut") === "new";
@@ -175,6 +176,8 @@ export function ShortcutSettings({ token, user }: Props) {
           Novo atalho
         </button>
       </header>
+
+      {notificationContent}
 
       <div className={styles.settingsToolbar}>
         <input
