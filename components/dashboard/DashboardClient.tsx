@@ -131,12 +131,20 @@ async function getServiceWorkerRegistration() {
   return navigator.serviceWorker.ready;
 }
 
-async function subscribeBrowserToPush(registration: ServiceWorkerRegistration, publicKey: string) {
+async function subscribeBrowserToPush(
+  registration: ServiceWorkerRegistration,
+  publicKey: string,
+  forceNew = false,
+) {
   const applicationServerKey = urlBase64ToUint8Array(publicKey);
   const existingSubscription = await registration.pushManager.getSubscription();
 
-  if (existingSubscription) {
+  if (existingSubscription && !forceNew) {
     return existingSubscription;
+  }
+
+  if (existingSubscription) {
+    await existingSubscription.unsubscribe().catch(() => undefined);
   }
 
   return registration.pushManager.subscribe({
@@ -273,7 +281,11 @@ async function registerAdminPushSubscription(token: string) {
       }
 
       const registration = await getServiceWorkerRegistration();
-      const subscription = await subscribeBrowserToPush(registration, config.publicKey);
+      const subscription = await subscribeBrowserToPush(
+        registration,
+        config.publicKey,
+        true,
+      );
 
       await subscribeAdminToPush(token, { subscription: subscription.toJSON() });
       registered = true;
