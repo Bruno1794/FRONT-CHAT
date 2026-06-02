@@ -260,12 +260,15 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
 
             if (attachment.mime_type.startsWith("audio/")) {
               return (
-                <audio
-                  className={styles.audioAttachment}
-                  controls
-                  key={attachment.filename}
-                  src={url}
-                />
+                <div className={styles.audioAttachment} key={attachment.filename}>
+                  <span className={styles.audioIcon} aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M12 14c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v5c0 1.66 1.34 3 3 3Z" />
+                      <path d="M17.3 11c0 3-2.14 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.52 2.55 6.28 6 6.75V21h2v-3.25c3.45-.47 6-3.23 6-6.75h-1.7Z" />
+                    </svg>
+                  </span>
+                  <audio controls preload="metadata" src={url} />
+                </div>
               );
             }
 

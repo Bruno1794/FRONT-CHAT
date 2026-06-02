@@ -58,6 +58,7 @@ export function ChatInput({
   const [message, setMessage] = useState("");
   const [recordingError, setRecordingError] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [isLoadingShortcuts, setIsLoadingShortcuts] = useState(false);
@@ -68,6 +69,8 @@ export function ChatInput({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<number | null>(null);
+  const shouldDiscardRecordingRef = useRef(false);
   const shortcutQuery = message.startsWith("/") ? message.split(/\s/)[0] : "";
   const hasMessageContent = message.trim().length > 0 || files.length > 0;
   const shouldShowShortcuts = Boolean(
@@ -262,9 +265,25 @@ export function ChatInput({
     });
   };
 
-  const stopStream = () => {
+  const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+  }, []);
+
+  const clearRecordingTimer = useCallback(() => {
+    if (recordingIntervalRef.current) {
+      window.clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+  }, []);
+
+  const formatRecordingTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const remainingSeconds = (seconds % 60).toString().padStart(2, "0");
+
+    return `${minutes}:${remainingSeconds}`;
   };
 
   const startRecording = async () => {
@@ -273,6 +292,7 @@ export function ChatInput({
     }
 
     setRecordingError("");
+    shouldDiscardRecordingRef.current = false;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -292,22 +312,42 @@ export function ChatInput({
         const mimeType = recorder.mimeType || "audio/webm";
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         const extension = mimeType.includes("mp4") ? "m4a" : "webm";
-        const audioFile = new File(
-          [audioBlob],
-          `audio-${new Date().toISOString().replace(/[:.]/g, "-")}.${extension}`,
-          { type: mimeType },
-        );
 
-        onFilesChange?.([...files, audioFile]);
+        clearRecordingTimer();
+        setRecordingSeconds(0);
+        setIsRecording(false);
+        stopStream();
+
+        if (!shouldDiscardRecordingRef.current && audioBlob.size > 0) {
+          const audioFile = new File(
+            [audioBlob],
+            `audio-${new Date().toISOString().replace(/[:.]/g, "-")}.${extension}`,
+            { type: mimeType },
+          );
+
+          void onSend?.("", [audioFile]);
+          setMessage("");
+          onFilesChange?.([]);
+          setShortcuts([]);
+          setIsEmojiPickerOpen(false);
+        }
+
         audioChunksRef.current = [];
         mediaRecorderRef.current = null;
-        stopStream();
+        shouldDiscardRecordingRef.current = false;
       };
 
       recorder.start();
       setIsRecording(true);
+      setRecordingSeconds(0);
+      clearRecordingTimer();
+      recordingIntervalRef.current = window.setInterval(() => {
+        setRecordingSeconds((current) => current + 1);
+      }, 1000);
     } catch {
       setRecordingError("Nao foi possivel acessar o microfone.");
+      clearRecordingTimer();
+      setRecordingSeconds(0);
       stopStream();
     }
   };
@@ -318,16 +358,31 @@ export function ChatInput({
     }
 
     mediaRecorderRef.current.stop();
-    setIsRecording(false);
   };
 
   const cancelRecording = () => {
+    shouldDiscardRecordingRef.current = true;
     audioChunksRef.current = [];
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current?.state !== "inactive") {
+      mediaRecorderRef.current?.stop();
+    }
     mediaRecorderRef.current = null;
     setIsRecording(false);
+    setRecordingSeconds(0);
+    clearRecordingTimer();
     stopStream();
   };
+
+  useEffect(() => {
+    return () => {
+      shouldDiscardRecordingRef.current = true;
+      clearRecordingTimer();
+      if (mediaRecorderRef.current?.state !== "inactive") {
+        mediaRecorderRef.current?.stop();
+      }
+      stopStream();
+    };
+  }, [clearRecordingTimer, stopStream]);
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
@@ -357,13 +412,35 @@ export function ChatInput({
       ) : null}
       {isRecording ? (
         <div className={styles.recordingBar}>
-          <span />
-          Gravando audio...
-          <button type="button" onClick={stopRecording}>
-            Usar audio
+          <button
+            className={styles.cancelRecording}
+            type="button"
+            aria-label="Cancelar gravacao"
+            onClick={cancelRecording}
+          >
+            x
           </button>
-          <button type="button" onClick={cancelRecording}>
-            Cancelar
+          <div className={styles.recordingStatus}>
+            <span className={styles.recordingDot} />
+            <strong>Gravando audio</strong>
+            <small>{formatRecordingTime(recordingSeconds)}</small>
+          </div>
+          <div className={styles.recordingWave} aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <button
+            className={styles.stopRecording}
+            type="button"
+            aria-label="Parar e enviar audio"
+            onClick={stopRecording}
+          >
+            <span />
           </button>
         </div>
       ) : null}
