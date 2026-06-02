@@ -646,6 +646,8 @@
 }
 
 .threadHeader {
+  position: relative;
+  z-index: 5;
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: 12px;
