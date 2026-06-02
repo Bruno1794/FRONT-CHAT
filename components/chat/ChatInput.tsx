@@ -6,6 +6,7 @@ import {
   ChangeEvent,
   FormEvent,
   KeyboardEvent,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -71,6 +72,22 @@ export function ChatInput({
   const shouldShowShortcuts = Boolean(
     shortcutToken && shortcutQuery.startsWith("/") && !disabled && !isSending,
   );
+
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 132)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 132 ? "auto" : "hidden";
+  }, []);
+
+  useEffect(() => {
+    resizeTextarea();
+  }, [message, resizeTextarea]);
 
   useEffect(() => {
     if (!shortcutToken || !shouldShowShortcuts) {
@@ -169,6 +186,7 @@ export function ChatInput({
     onFilesChange?.([]);
     setShortcuts([]);
     setIsEmojiPickerOpen(false);
+    window.requestAnimationFrame(resizeTextarea);
   };
 
   const applyShortcut = (shortcut: Shortcut) => {
@@ -222,6 +240,8 @@ export function ChatInput({
       setShortcutError("");
       setIsLoadingShortcuts(false);
     }
+
+    window.requestAnimationFrame(resizeTextarea);
   };
 
   const insertEmoji = (emoji: string) => {
