@@ -719,7 +719,7 @@ export function DashboardClient() {
 
       setBroadcastMessage("");
       setBroadcastFeedback(
-        `Aviso enviado para ${result.total_conversations} conversas. Online: ${result.online_conversations}. Push: ${result.push_conversations}.`,
+        `Mensagem salva em ${result.messages_created ?? result.total_conversations} conversas. Online: ${result.online_conversations}. Notificacoes: ${result.push_conversations}.`,
       );
     } catch (err) {
       setBroadcastFeedback(
@@ -1379,8 +1379,8 @@ export function DashboardClient() {
                   </button>
                 </header>
                 <p className={styles.broadcastHelp}>
-                  Esse aviso aparece nos chats ativos e envia notificacao para clientes
-                  sem a conversa aberta. Ele nao fica salvo no historico.
+                  Essa mensagem sera salva no historico de todos os chats e tambem
+                  enviara notificacao para os clientes cadastrados.
                 </p>
                 <label>
                   <span>Titulo</span>

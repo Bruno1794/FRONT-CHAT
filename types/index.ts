@@ -107,6 +107,8 @@ export interface BroadcastNotice {
 export interface BroadcastNoticeResult {
   success: boolean;
   total_conversations: number;
+  messages_created?: number;
+  failed_conversations?: number;
   online_conversations: number;
   push_conversations: number;
 }
