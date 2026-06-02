@@ -487,6 +487,16 @@ export function DashboardClient() {
       }
     };
 
+    const pingSelectedConversationPresence = () => {
+      if (selectedId !== null) {
+        socket.emit("conversation_presence_ping", {
+          conversation_id: selectedId,
+          participant_type: "ATENDENTE",
+          actor_id: user?.id,
+        });
+      }
+    };
+
     const reload = () => {
       getConversations(token)
         .then((data) => {
@@ -591,6 +601,10 @@ export function DashboardClient() {
     };
 
     joinSelectedConversation();
+    const presenceIntervalId = window.setInterval(
+      pingSelectedConversationPresence,
+      20000,
+    );
     socket.on("connect", joinSelectedConversation);
     socket.on("message_received", handleMessage);
     socket.on("message_sent", handleMessage);
@@ -601,6 +615,7 @@ export function DashboardClient() {
     socket.on("conversation_presence", handleConversationPresence);
 
     return () => {
+      window.clearInterval(presenceIntervalId);
       if (selectedId !== null) {
         socket.emit("leave_conversation", { conversation_id: selectedId });
       }
