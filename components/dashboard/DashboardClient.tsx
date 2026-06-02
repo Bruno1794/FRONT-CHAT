@@ -159,6 +159,7 @@ export function DashboardClient() {
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
+  const latestMessagesRef = useRef<Message[]>(messages);
   const unreadCountsRef = useRef<Record<number, number>>({});
   const conversationPreviewOverridesRef = useRef<
     Record<number, { ultima_interacao: string; ultima_mensagem: string }>
@@ -177,6 +178,22 @@ export function DashboardClient() {
   const shouldShowAdminPushPrompt =
     Boolean(token) && !["active", "unsupported", "blocked"].includes(pushState);
   const shouldShowInstallPrompt = Boolean(deferredInstallPrompt) && !isPwaInstalled;
+
+  const isActiveThreadVisible = useCallback(() => {
+    if (activeTab !== "chats") {
+      return false;
+    }
+
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      return false;
+    }
+
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    return window.matchMedia("(min-width: 821px)").matches || isMobileThreadOpen;
+  }, [activeTab, isMobileThreadOpen]);
 
   const getClienteLabel = (conversation: Conversation) =>
     conversation.cliente?.referencia ??
@@ -358,6 +375,10 @@ export function DashboardClient() {
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  useEffect(() => {
+    latestMessagesRef.current = messages;
+  }, [messages]);
 
   const markConversationAsRead = useCallback(
     async (accessToken: string, conversationId: number, conversationMessages: Message[]) => {
@@ -632,12 +653,16 @@ export function DashboardClient() {
         }
 
         setMessages(data);
-        return markConversationAsRead(token, conversationId, data);
+        if (isActiveThreadVisible()) {
+          return markConversationAsRead(token, conversationId, data);
+        }
+
+        return undefined;
       })
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Falha ao carregar mensagens."),
       );
-  }, [markConversationAsRead, selectedId, token]);
+  }, [isActiveThreadVisible, markConversationAsRead, selectedId, token]);
 
   const updateMessageScrollState = useCallback(() => {
     const element = messagesRef.current;
@@ -711,7 +736,7 @@ export function DashboardClient() {
     }
 
     const joinSelectedConversation = () => {
-      if (selectedId !== null) {
+      if (selectedId !== null && isActiveThreadVisible()) {
         socket.emit("join_conversation", {
           conversation_id: selectedId,
           participant_type: "ATENDENTE",
@@ -720,13 +745,36 @@ export function DashboardClient() {
       }
     };
 
-    const pingSelectedConversationPresence = () => {
+    const leaveSelectedConversation = () => {
       if (selectedId !== null) {
+        socket.emit("leave_conversation", { conversation_id: selectedId });
+      }
+    };
+
+    const pingSelectedConversationPresence = () => {
+      if (selectedId !== null && isActiveThreadVisible()) {
         socket.emit("conversation_presence_ping", {
           conversation_id: selectedId,
           participant_type: "ATENDENTE",
           actor_id: user?.id,
         });
+      }
+    };
+
+    const syncSelectedConversationPresence = () => {
+      if (!isActiveThreadVisible()) {
+        leaveSelectedConversation();
+        return;
+      }
+
+      joinSelectedConversation();
+
+      if (selectedId !== null) {
+        void markConversationAsRead(
+          token,
+          selectedId,
+          latestMessagesRef.current,
+        ).catch(() => undefined);
       }
     };
 
@@ -773,7 +821,9 @@ export function DashboardClient() {
             ? current
             : [...current, message],
         );
-        void markConversationAsRead(token, selectedId, [message]);
+        if (isActiveThreadVisible()) {
+          void markConversationAsRead(token, selectedId, [message]);
+        }
       }
       patchConversationPreviewFromMessage(message);
       reload();
@@ -833,11 +883,14 @@ export function DashboardClient() {
       }
     };
 
-    joinSelectedConversation();
+    syncSelectedConversationPresence();
     const presenceIntervalId = window.setInterval(
       pingSelectedConversationPresence,
       20000,
     );
+    document.addEventListener("visibilitychange", syncSelectedConversationPresence);
+    window.addEventListener("focus", syncSelectedConversationPresence);
+    window.addEventListener("blur", leaveSelectedConversation);
     socket.on("connect", joinSelectedConversation);
     socket.on("message_received", handleMessage);
     socket.on("message_sent", handleMessage);
@@ -849,9 +902,13 @@ export function DashboardClient() {
 
     return () => {
       window.clearInterval(presenceIntervalId);
-      if (selectedId !== null) {
-        socket.emit("leave_conversation", { conversation_id: selectedId });
-      }
+      document.removeEventListener(
+        "visibilitychange",
+        syncSelectedConversationPresence,
+      );
+      window.removeEventListener("focus", syncSelectedConversationPresence);
+      window.removeEventListener("blur", leaveSelectedConversation);
+      leaveSelectedConversation();
       socket.off("connect", joinSelectedConversation);
       socket.off("message_received", handleMessage);
       socket.off("message_sent", handleMessage);
@@ -863,6 +920,7 @@ export function DashboardClient() {
     };
   }, [
     applyConversationPreviewOverrides,
+    isActiveThreadVisible,
     loadConversations,
     markConversationAsRead,
     matchesConversationSearch,
