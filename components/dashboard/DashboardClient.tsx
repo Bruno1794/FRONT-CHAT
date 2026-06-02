@@ -345,7 +345,7 @@ export function DashboardClient() {
   const shouldShowAdminPushPrompt =
     Boolean(token) &&
     (!["active", "unsupported", "blocked", "subscribing"].includes(pushState) ||
-      (Boolean(PUSHALERT_SCRIPT_URL) && !isPushAlertKnownActive));
+      Boolean(PUSHALERT_SCRIPT_URL));
   const shouldShowInstallPrompt = Boolean(deferredInstallPrompt) && !isPwaInstalled;
 
   const isActiveThreadVisible = useCallback(() => {
@@ -1517,13 +1517,17 @@ export function DashboardClient() {
                   {pushState === "subscribing" ? "Ativando..." : "Ativar notificacoes"}
                 </button>
               ) : null}
-              {PUSHALERT_SCRIPT_URL && !isPushAlertKnownActive ? (
+              {PUSHALERT_SCRIPT_URL ? (
                 <button
                   type="button"
                   disabled={pushState === "subscribing"}
                   onClick={handleEnableAdminPushAlert}
                 >
-                  {pushState === "subscribing" ? "Ativando..." : "Ativar no celular"}
+                  {pushState === "subscribing"
+                    ? "Ativando..."
+                    : isPushAlertKnownActive
+                      ? "Atualizar celular"
+                      : "Ativar no celular"}
                 </button>
               ) : null}
             </div>
