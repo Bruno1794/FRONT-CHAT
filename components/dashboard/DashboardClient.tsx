@@ -65,6 +65,7 @@ type BeforeInstallPromptEvent = Event & {
 type PushState = "idle" | "unsupported" | "blocked" | "ready" | "subscribing" | "active" | "error";
 
 const ADMIN_PUSH_ENABLED_KEY = "suportesync.adminPushEnabled";
+const ADMIN_PUSHALERT_ENABLED_KEY = "suportesync.adminPushAlertEnabled";
 const PUSHALERT_SCRIPT_URL = process.env.NEXT_PUBLIC_PUSHALERT_SCRIPT_URL ?? "";
 
 type PushAlertQueueItem = [string, (...args: unknown[]) => void];
@@ -255,7 +256,12 @@ async function registerAdminPushSubscription(token: string) {
   }
 
   try {
-    registered = (await registerAdminPushAlertSubscription(token)) || registered;
+    const pushAlertRegistered = await registerAdminPushAlertSubscription(token);
+    registered = pushAlertRegistered || registered;
+
+    if (pushAlertRegistered) {
+      localStorage.setItem(ADMIN_PUSHALERT_ENABLED_KEY, "true");
+    }
   } catch (error) {
     errors.push(error instanceof Error ? error.message : "PushAlert falhou.");
   }
@@ -301,6 +307,11 @@ export function DashboardClient() {
       : "idle",
   );
   const [pushError, setPushError] = useState("");
+  const [isPushAlertKnownActive, setIsPushAlertKnownActive] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      localStorage.getItem(ADMIN_PUSHALERT_ENABLED_KEY) === "true",
+  );
   const [isThreadSearchOpen, setIsThreadSearchOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
   const [activeThreadMatchIndex, setActiveThreadMatchIndex] = useState(0);
@@ -333,7 +344,8 @@ export function DashboardClient() {
   const selectedClientLastSeen = selectedId ? clientLastSeen[selectedId] : undefined;
   const shouldShowAdminPushPrompt =
     Boolean(token) &&
-    !["active", "unsupported", "blocked", "subscribing"].includes(pushState);
+    (!["active", "unsupported", "blocked", "subscribing"].includes(pushState) ||
+      (Boolean(PUSHALERT_SCRIPT_URL) && !isPushAlertKnownActive));
   const shouldShowInstallPrompt = Boolean(deferredInstallPrompt) && !isPwaInstalled;
 
   const isActiveThreadVisible = useCallback(() => {
@@ -843,11 +855,44 @@ export function DashboardClient() {
 
       await registerAdminPushSubscription(token);
       localStorage.setItem(ADMIN_PUSH_ENABLED_KEY, "true");
+      if (PUSHALERT_SCRIPT_URL) {
+        setIsPushAlertKnownActive(
+          localStorage.getItem(ADMIN_PUSHALERT_ENABLED_KEY) === "true",
+        );
+      }
       setPushState("active");
     } catch (err) {
       setPushState("error");
       setPushError(
         err instanceof Error ? err.message : "Nao foi possivel ativar notificacoes.",
+      );
+    }
+  };
+
+  const handleEnableAdminPushAlert = async () => {
+    if (!token) {
+      return;
+    }
+
+    setPushState("subscribing");
+    setPushError("");
+
+    try {
+      const pushAlertRegistered = await registerAdminPushAlertSubscription(token);
+
+      if (!pushAlertRegistered) {
+        throw new Error("PushAlert nao esta configurado.");
+      }
+
+      localStorage.setItem(ADMIN_PUSHALERT_ENABLED_KEY, "true");
+      setIsPushAlertKnownActive(true);
+      setPushState("active");
+    } catch (err) {
+      localStorage.removeItem(ADMIN_PUSHALERT_ENABLED_KEY);
+      setIsPushAlertKnownActive(false);
+      setPushState("ready");
+      setPushError(
+        err instanceof Error ? err.message : "Nao foi possivel ativar PushAlert.",
       );
     }
   };
@@ -1461,13 +1506,24 @@ export function DashboardClient() {
                   Instalar
                 </button>
               ) : null}
-              {shouldShowAdminPushPrompt ? (
+              {!["active", "unsupported", "blocked", "subscribing"].includes(
+                pushState,
+              ) ? (
                 <button
                   type="button"
                   disabled={pushState === "subscribing"}
                   onClick={handleEnableAdminPush}
                 >
                   {pushState === "subscribing" ? "Ativando..." : "Ativar notificacoes"}
+                </button>
+              ) : null}
+              {PUSHALERT_SCRIPT_URL && !isPushAlertKnownActive ? (
+                <button
+                  type="button"
+                  disabled={pushState === "subscribing"}
+                  onClick={handleEnableAdminPushAlert}
+                >
+                  {pushState === "subscribing" ? "Ativando..." : "Ativar no celular"}
                 </button>
               ) : null}
             </div>
