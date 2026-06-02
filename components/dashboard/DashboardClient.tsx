@@ -189,7 +189,8 @@ export function DashboardClient() {
   const isSelectedClientOnline = Boolean(selectedPresence?.clientes);
   const selectedClientLastSeen = selectedId ? clientLastSeen[selectedId] : undefined;
   const shouldShowAdminPushPrompt =
-    Boolean(token) && !["active", "unsupported", "blocked"].includes(pushState);
+    Boolean(token) &&
+    !["active", "unsupported", "blocked", "subscribing"].includes(pushState);
   const shouldShowInstallPrompt = Boolean(deferredInstallPrompt) && !isPwaInstalled;
 
   const isActiveThreadVisible = useCallback(() => {
@@ -546,9 +547,7 @@ export function DashboardClient() {
       }
 
       if (Notification.permission === "granted") {
-        setPushState(
-          localStorage.getItem(ADMIN_PUSH_ENABLED_KEY) === "true" ? "active" : "ready",
-        );
+        setPushState("ready");
         return;
       }
 
@@ -559,16 +558,27 @@ export function DashboardClient() {
   useEffect(() => {
     if (
       !token ||
-      pushState !== "active" ||
+      !["active", "ready"].includes(pushState) ||
       typeof Notification === "undefined" ||
       Notification.permission !== "granted"
     ) {
       return;
     }
 
-    void registerAdminPushSubscription(token).catch(() => {
-      localStorage.removeItem(ADMIN_PUSH_ENABLED_KEY);
-      setPushState("ready");
+    queueMicrotask(() => {
+      if (pushState === "ready") {
+        setPushState("subscribing");
+      }
+
+      void registerAdminPushSubscription(token)
+        .then(() => {
+          localStorage.setItem(ADMIN_PUSH_ENABLED_KEY, "true");
+          setPushState("active");
+        })
+        .catch(() => {
+          localStorage.removeItem(ADMIN_PUSH_ENABLED_KEY);
+          setPushState("ready");
+        });
     });
   }, [pushState, token]);
 
