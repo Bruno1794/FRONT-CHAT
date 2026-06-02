@@ -215,9 +215,8 @@
   grid-template-columns: 38px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
-  width: 300px;
-  max-width: calc(100vw - 96px);
-  min-width: 250px;
+  width: min(300px, 100%);
+  min-width: min(250px, 100%);
   margin-top: 10px;
   border-radius: 999px;
   padding: 7px 10px 7px 7px;
@@ -255,9 +254,30 @@
 }
 
 @media (max-width: 520px) {
+  .bubble {
+    max-width: min(86%, 360px);
+  }
+
   .audioAttachment {
-    width: calc(100vw - 112px);
-    min-width: 220px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    padding: 6px 8px 6px 6px;
+  }
+
+  .audioIcon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .audioIcon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .audioAttachment audio {
+    height: 32px;
   }
 }
 
