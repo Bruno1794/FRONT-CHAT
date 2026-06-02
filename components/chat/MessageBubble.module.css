@@ -255,29 +255,33 @@
 
 @media (max-width: 520px) {
   .bubble {
-    max-width: min(86%, 360px);
+    max-width: 92%;
   }
 
   .audioAttachment {
-    grid-template-columns: 32px minmax(0, 1fr);
-    gap: 7px;
-    width: 100%;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+    width: min(300px, calc(100vw - 72px));
     min-width: 0;
-    padding: 6px 8px 6px 6px;
+    max-width: 100%;
+    padding: 7px 9px 7px 7px;
   }
 
   .audioIcon {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
   }
 
   .audioIcon svg {
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
   }
 
   .audioAttachment audio {
-    height: 32px;
+    display: block;
+    width: 100%;
+    min-width: 168px;
+    height: 34px;
   }
 }
 
