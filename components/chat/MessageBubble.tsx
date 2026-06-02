@@ -33,6 +33,8 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
   const hasAudioAttachment = Boolean(
     !isDeleted && message.attachments?.some((attachment) => attachment.mime_type.startsWith("audio/")),
   );
+  const isRead = Boolean(message.read || message.read_at);
+  const isDelivered = message.id > 0;
   const canManage = isMe && message.id > 0 && !isDeleted;
   const reactionGroups = Object.values(
     (message.reactions ?? []).reduce<Record<string, { emoji: string; count: number }>>(
@@ -286,13 +288,15 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
             <span>{formatTime(message.created_at)}</span>
             {message.edited_at && !isDeleted ? <span>Editada</span> : null}
             <span
-              aria-label={message.read || message.read_at ? "Mensagem lida" : "Mensagem enviada"}
+              aria-label={
+                isRead ? "Mensagem lida" : isDelivered ? "Mensagem entregue" : "Mensagem enviada"
+              }
               className={`${styles.receipt} ${
-                message.read || message.read_at ? styles.read : ""
+                isRead ? styles.read : isDelivered ? styles.delivered : ""
               }`}
-              title={message.read || message.read_at ? "Lida" : "Enviada"}
+              title={isRead ? "Lida" : isDelivered ? "Entregue" : "Enviada"}
             >
-              {message.read || message.read_at ? "✓✓" : "✓"}
+              {isDelivered ? "✓✓" : "✓"}
             </span>
           </span>
           {reactionGroups.length > 0 ? (

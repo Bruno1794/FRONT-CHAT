@@ -340,6 +340,11 @@
   letter-spacing: -2px;
 }
 
+.delivered {
+  color: #9aa5a1;
+  opacity: 1;
+}
+
 .read {
   color: #53bdeb;
   opacity: 1;
