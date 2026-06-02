@@ -34,6 +34,7 @@ import styles from "@/app/chat/chat.module.css";
 
 const CLIENT_CHAT_SESSION_KEY = "suportesync.clientChat";
 const CLIENT_PUSH_ENABLED_KEY = "suportesync.clientPushEnabled";
+const CLIENT_PUSHALERT_ENABLED_KEY = "suportesync.clientPushAlertEnabled";
 const PUSHALERT_SCRIPT_URL = process.env.NEXT_PUBLIC_PUSHALERT_SCRIPT_URL ?? "";
 
 type WindowWithAudioContext = Window & {
@@ -289,6 +290,11 @@ export function ChatWidgetClient() {
   const [pushError, setPushError] = useState("");
   const [pushAlertState, setPushAlertState] = useState<PushAlertState>("idle");
   const [pushAlertError, setPushAlertError] = useState("");
+  const [isPushAlertKnownActive, setIsPushAlertKnownActive] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      localStorage.getItem(CLIENT_PUSHALERT_ENABLED_KEY) === "true",
+  );
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -303,7 +309,8 @@ export function ChatWidgetClient() {
   const shouldShowPushAlertPrompt =
     Boolean(conversation) &&
     Boolean(PUSHALERT_SCRIPT_URL) &&
-    pushAlertState !== "active";
+    pushAlertState !== "active" &&
+    !isPushAlertKnownActive;
 
   const normalizeSearchValue = (value?: string | number | null) =>
     String(value ?? "")
@@ -787,6 +794,8 @@ export function ChatWidgetClient() {
           conversation_id: conversation.id,
           subscriber_id: currentSubscriberId,
         });
+        localStorage.setItem(CLIENT_PUSHALERT_ENABLED_KEY, "true");
+        setIsPushAlertKnownActive(true);
         setPushAlertState("active");
         return;
       }
@@ -840,6 +849,8 @@ export function ChatWidgetClient() {
         conversation_id: conversation.id,
         subscriber_id: subscriberId,
       });
+      localStorage.setItem(CLIENT_PUSHALERT_ENABLED_KEY, "true");
+      setIsPushAlertKnownActive(true);
       setPushAlertState("active");
     } catch (err) {
       setPushAlertError(
@@ -1051,8 +1062,8 @@ export function ChatWidgetClient() {
   const pushAlertPrompt = shouldShowPushAlertPrompt ? (
     <aside className={styles.notificationPrompt}>
       <div>
-        <strong>Teste alternativo PushAlert</strong>
-        <p>Use esta opcao se o push nativo do navegador continuar falhando.</p>
+        <strong>Ativar notificacoes</strong>
+        <p>Receba avisos no celular quando o suporte responder.</p>
         {pushAlertError ? <small>{pushAlertError}</small> : null}
       </div>
       <button
@@ -1064,7 +1075,7 @@ export function ChatWidgetClient() {
           <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
           <path d="M10 21h4" />
         </svg>
-        {pushAlertState === "loading" ? "Ativando..." : "Testar"}
+        {pushAlertState === "loading" ? "Ativando..." : "Ativar"}
       </button>
     </aside>
   ) : null;
