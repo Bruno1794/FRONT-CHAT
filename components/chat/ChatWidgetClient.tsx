@@ -6,6 +6,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { EditMessageModal } from "@/components/chat/EditMessageModal";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { useSocket } from "@/hooks/useSocket";
+import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 import {
   createConversation,
   deleteMessage,
@@ -259,6 +260,8 @@ function readStoredClientChat(initialCode: string) {
 }
 
 export function ChatWidgetClient() {
+  useVisualViewportHeight();
+
   const searchParams = useSearchParams();
   const initialCode = searchParams.get("code") ?? "";
   const [codigoAcesso, setCodigoAcesso] = useState(

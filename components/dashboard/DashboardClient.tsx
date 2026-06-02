@@ -8,6 +8,7 @@ import { ShortcutSettings } from "@/components/dashboard/ShortcutSettings";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useSocket } from "@/hooks/useSocket";
+import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 import {
   clearAuthSession,
   getAccessToken,
@@ -50,6 +51,8 @@ type WindowWithAudioContext = Window & {
 };
 
 export function DashboardClient() {
+  useVisualViewportHeight();
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") ?? "dashboard";

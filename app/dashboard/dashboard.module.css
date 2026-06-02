@@ -1107,7 +1107,8 @@
   .shell {
     position: fixed;
     inset: 0;
-    height: auto;
+    height: var(--app-height, 100dvh);
+    max-height: var(--app-height, 100dvh);
     min-height: 0;
     overflow: hidden;
     flex-direction: column;
