@@ -720,11 +720,11 @@
 @media (max-width: 640px) {
   :global(.ios-viewport) .page {
     position: relative;
-    min-height: var(--app-height, 100svh);
+    min-height: 100svh;
   }
 
   :global(.ios-viewport) .chat {
-    height: var(--app-height, 100svh);
-    min-height: var(--app-height, 100svh);
+    height: 100svh;
+    min-height: 100svh;
   }
 }

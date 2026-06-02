@@ -12,7 +12,7 @@ export function useVisualViewportHeight() {
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
     const updateHeight = () => {
-      const height = window.visualViewport?.height ?? window.innerHeight;
+      const height = isIos ? window.innerHeight : window.visualViewport?.height ?? window.innerHeight;
 
       document.documentElement.style.setProperty(APP_HEIGHT_PROPERTY, `${height}px`);
     };
