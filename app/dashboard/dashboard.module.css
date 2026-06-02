@@ -1105,10 +1105,10 @@
 
 @media (max-width: 820px) {
   .shell {
-    height: 100vh;
-    height: 100dvh;
-    min-height: 100vh;
-    min-height: 100dvh;
+    position: fixed;
+    inset: 0;
+    height: auto;
+    min-height: 0;
     overflow: hidden;
     flex-direction: column;
   }
@@ -1180,6 +1180,8 @@
   }
 
   .threadHeader {
+    position: sticky;
+    top: 0;
     grid-template-columns: 38px minmax(0, 1fr) 38px 38px;
     gap: 6px;
     min-height: 58px;
