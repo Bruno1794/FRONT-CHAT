@@ -69,6 +69,7 @@ export function ChatInput({
   const streamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const shortcutQuery = message.startsWith("/") ? message.split(/\s/)[0] : "";
+  const hasMessageContent = message.trim().length > 0 || files.length > 0;
   const shouldShowShortcuts = Boolean(
     shortcutToken && shortcutQuery.startsWith("/") && !disabled && !isSending,
   );
@@ -440,26 +441,7 @@ export function ChatInput({
       >
         +
       </button>
-      <button
-        className={`${styles.attach} ${isRecording ? styles.recording : ""}`}
-        disabled={disabled || isSending}
-        type="button"
-        aria-label={isRecording ? "Parar gravacao" : "Gravar audio"}
-        onClick={isRecording ? stopRecording : startRecording}
-      >
-        {isRecording ? (
-          "■"
-        ) : (
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className={styles.micIcon}
-          >
-            <path d="M12 14c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v5c0 1.66 1.34 3 3 3Z" />
-            <path d="M17.3 11c0 3-2.14 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.52 2.55 6.28 6 6.75V21h2v-3.25c3.45-.47 6-3.23 6-6.75h-1.7Z" />
-          </svg>
-        )}
-      </button>
+
       <button
         className={styles.attach}
         disabled={disabled || isSending}
@@ -481,18 +463,41 @@ export function ChatInput({
         onKeyDown={handleKeyDown}
         onChange={(event) => handleMessageChange(event.target.value)}
       />
-      <Button disabled={disabled || isSending} type="submit">
-        <span className={styles.sendText}>
-          {isSending ? "Enviando..." : files.length > 0 ? "Enviar anexos" : "Enviar"}
-        </span>
-        <svg
-          aria-hidden="true"
-          className={styles.sendIcon}
-          viewBox="0 0 24 24"
+      {hasMessageContent ? (
+        <Button disabled={disabled || isSending} type="submit">
+          <span className={styles.sendText}>
+            {isSending ? "Enviando..." : files.length > 0 ? "Enviar anexos" : "Enviar"}
+          </span>
+          <svg
+            aria-hidden="true"
+            className={styles.sendIcon}
+            viewBox="0 0 24 24"
+          >
+            <path d="M3.6 20.4 21 12 3.6 3.6 3 10l10 2-10 2 .6 6.4Z" />
+          </svg>
+        </Button>
+      ) : (
+        <button
+          className={`${styles.voiceSendButton} ${isRecording ? styles.recording : ""}`}
+          disabled={disabled || isSending}
+          type="button"
+          aria-label={isRecording ? "Parar gravacao" : "Gravar audio"}
+          onClick={isRecording ? stopRecording : startRecording}
         >
-          <path d="M3.6 20.4 21 12 3.6 3.6 3 10l10 2-10 2 .6 6.4Z" />
-        </svg>
-      </Button>
+          {isRecording ? (
+            "Parar"
+          ) : (
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className={styles.micIcon}
+            >
+              <path d="M12 14c1.66 0 3-1.34 3-3V6c0-1.66-1.34-3-3-3S9 4.34 9 6v5c0 1.66 1.34 3 3 3Z" />
+              <path d="M17.3 11c0 3-2.14 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.52 2.55 6.28 6 6.75V21h2v-3.25c3.45-.47 6-3.23 6-6.75h-1.7Z" />
+            </svg>
+          )}
+        </button>
+      )}
     </form>
   );
 }

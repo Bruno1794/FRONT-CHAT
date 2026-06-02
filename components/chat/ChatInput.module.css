@@ -1,6 +1,6 @@
 .form {
   display: grid;
-  grid-template-columns: 40px 40px 40px minmax(0, 1fr) 44px;
+  grid-template-columns: 40px 40px minmax(0, 1fr) 44px;
   gap: 8px;
   align-items: end;
   flex-shrink: 0;
@@ -310,7 +310,7 @@
 }
 
 .form textarea {
-  grid-column: 4;
+  grid-column: 3;
   width: 100%;
   min-height: 40px;
   max-height: 132px;
@@ -336,7 +336,8 @@
   outline: 0;
 }
 
-.form > button[type="submit"] {
+.form > button[type="submit"],
+.voiceSendButton {
   display: grid;
   width: 44px;
   min-width: 44px;
@@ -350,7 +351,15 @@
     transform 160ms ease;
 }
 
-.form > button[type="submit"]:hover:not(:disabled) {
+.voiceSendButton {
+  border: 0;
+  background: var(--primary);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.form > button[type="submit"]:hover:not(:disabled),
+.voiceSendButton:hover:not(:disabled) {
   box-shadow: 0 10px 24px rgba(7, 94, 84, 0.22);
   transform: translateY(-1px) scale(1.02);
 }
@@ -372,7 +381,7 @@
 
 @media (max-width: 520px) {
   .form {
-    grid-template-columns: 36px 36px 36px minmax(0, 1fr) 40px;
+    grid-template-columns: 36px 36px minmax(0, 1fr) 40px;
     gap: 6px;
     padding: 8px;
   }
@@ -389,7 +398,8 @@
     padding: 8px 10px;
   }
 
-  .form > button[type="submit"] {
+  .form > button[type="submit"],
+  .voiceSendButton {
     width: 40px;
     min-width: 40px;
     height: 40px;
