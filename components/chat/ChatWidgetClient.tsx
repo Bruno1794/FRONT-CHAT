@@ -216,6 +216,10 @@ function getPushAlertSubscriberId() {
   return info?.subs_id || window.PushAlertCo?.subs_id || "";
 }
 
+function isDocumentVisible() {
+  return typeof document === "undefined" || document.visibilityState === "visible";
+}
+
 function readStoredClientChat(initialCode: string) {
   if (typeof window === "undefined") {
     return null;
@@ -299,6 +303,7 @@ export function ChatWidgetClient() {
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const latestMessagesRef = useRef<Message[]>(messages);
   const audioContextRef = useRef<AudioContext | null>(null);
   const hasAutoStartedRef = useRef(false);
   const socket = useSocket();
@@ -342,6 +347,10 @@ export function ChatWidgetClient() {
   }, [messages, threadSearch]);
 
   const markAttendantMessagesAsRead = useCallback((nextMessages: Message[]) => {
+    if (!isDocumentVisible()) {
+      return;
+    }
+
     nextMessages
       .filter(
         (message) =>
@@ -452,6 +461,10 @@ export function ChatWidgetClient() {
   }, []);
 
   useEffect(() => {
+    latestMessagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
@@ -541,11 +554,41 @@ export function ChatWidgetClient() {
     }
 
     const joinConversation = () => {
+      if (!isDocumentVisible()) {
+        return;
+      }
+
       socket.emit("join_conversation", {
         conversation_id: conversation.id,
         participant_type: "CLIENTE",
         actor_id: conversation.cliente_id_externo,
       });
+    };
+
+    const leaveConversation = () => {
+      socket.emit("leave_conversation", { conversation_id: conversation.id });
+    };
+
+    const pingPresence = () => {
+      if (!isDocumentVisible()) {
+        return;
+      }
+
+      socket.emit("conversation_presence_ping", {
+        conversation_id: conversation.id,
+        participant_type: "CLIENTE",
+        actor_id: conversation.cliente_id_externo,
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (isDocumentVisible()) {
+        joinConversation();
+        markAttendantMessagesAsRead(latestMessagesRef.current);
+        return;
+      }
+
+      leaveConversation();
     };
 
     const handleMessage = (message: Message) => {
@@ -570,7 +613,12 @@ export function ChatWidgetClient() {
         return alreadyExists ? current : [...current, message];
       });
 
-      if (message.sender_type === "ATENDENTE" && !message.read && !message.read_at) {
+      if (
+        isDocumentVisible() &&
+        message.sender_type === "ATENDENTE" &&
+        !message.read &&
+        !message.read_at
+      ) {
         playNotificationSound();
         void markMessageAsRead(message.id).catch(() => undefined);
       }
@@ -635,6 +683,10 @@ export function ChatWidgetClient() {
     };
 
     joinConversation();
+    const presenceIntervalId = window.setInterval(pingPresence, 5000);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", leaveConversation);
+    window.addEventListener("beforeunload", leaveConversation);
     socket.on("connect", joinConversation);
     socket.on("message_received", handleMessage);
     socket.on("message_sent", handleMessage);
@@ -645,7 +697,11 @@ export function ChatWidgetClient() {
     socket.on("conversation_presence", handleConversationPresence);
 
     return () => {
-      socket.emit("leave_conversation", { conversation_id: conversation.id });
+      window.clearInterval(presenceIntervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", leaveConversation);
+      window.removeEventListener("beforeunload", leaveConversation);
+      leaveConversation();
       socket.off("connect", joinConversation);
       socket.off("message_received", handleMessage);
       socket.off("message_sent", handleMessage);
@@ -655,7 +711,14 @@ export function ChatWidgetClient() {
       socket.off("conversation_updated", handleConversationUpdated);
       socket.off("conversation_presence", handleConversationPresence);
     };
-  }, [codigoAcesso, conversation, loadClientMessages, playNotificationSound, socket]);
+  }, [
+    codigoAcesso,
+    conversation,
+    loadClientMessages,
+    markAttendantMessagesAsRead,
+    playNotificationSound,
+    socket,
+  ]);
 
   useEffect(() => {
     messagesRef.current?.scrollTo({
