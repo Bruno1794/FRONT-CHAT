@@ -297,7 +297,7 @@ export function DashboardClient() {
       );
       setMessages((current) =>
         current.map((message) =>
-          message.conversation_id === conversationId && !message.read_at
+          unreadMessages.some((unreadMessage) => unreadMessage.id === message.id)
             ? { ...message, read: true, read_at: readAt }
             : message,
         ),
