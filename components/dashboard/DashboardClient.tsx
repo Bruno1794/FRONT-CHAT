@@ -154,6 +154,19 @@ async function loadPushAlertScript() {
   );
 
   if (existingScript) {
+    if (window.PushAlertCo) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener(
+        "error",
+        () => reject(new Error("Falha ao carregar PushAlert.")),
+        { once: true },
+      );
+      window.setTimeout(() => resolve(), 3000);
+    });
     return;
   }
 
@@ -170,7 +183,7 @@ async function loadPushAlertScript() {
 
 async function waitForPushAlertReady() {
   for (let attempt = 0; attempt < 30; attempt += 1) {
-    if (window.PushAlertCo || window.pushalertbyiw) {
+    if (window.PushAlertCo) {
       return;
     }
 
@@ -203,10 +216,15 @@ async function registerAdminPushAlertSubscription(token: string) {
   }
 
   const subscriberId = await new Promise<string>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error("PushAlert nao abriu a permissao no celular."));
+    }, 15000);
+
     window.pushalertbyiw = window.pushalertbyiw || [];
     window.pushalertbyiw.push([
       "onSuccess",
       (result: unknown) => {
+        window.clearTimeout(timeoutId);
         const successResult = result as PushAlertSuccessResult;
         const nextSubscriberId =
           successResult.subscriber_id || getPushAlertSubscriberId();
@@ -222,10 +240,18 @@ async function registerAdminPushAlertSubscription(token: string) {
     window.pushalertbyiw.push([
       "onFailure",
       (result: unknown) => {
+        window.clearTimeout(timeoutId);
         const failureResult = result as PushAlertFailureResult;
         reject(new Error(`PushAlert falhou${failureResult.status ? ` (${failureResult.status})` : ""}.`));
       },
     ]);
+
+    if (!window.PushAlertCo?.forceSubscribe) {
+      window.clearTimeout(timeoutId);
+      reject(new Error("PushAlert nao disponibilizou a permissao."));
+      return;
+    }
+
     window.PushAlertCo?.forceSubscribe?.();
   });
 
