@@ -512,6 +512,100 @@
   width: 100%;
 }
 
+.installModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.48);
+  animation: panelIn 160ms var(--ease-out);
+}
+
+.installModal {
+  width: min(380px, 100%);
+  border-radius: 16px;
+  padding: 18px;
+  background: #ffffff;
+  color: #17231f;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+  animation: popIn 180ms var(--ease-out);
+}
+
+.installModal header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #edf3f0;
+  padding-bottom: 12px;
+}
+
+.installModal header span {
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.installModal h2 {
+  margin: 4px 0 0;
+  font-size: 1.05rem;
+}
+
+.installModal header button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #eef2f0;
+  color: #111827;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.installModal ol {
+  display: grid;
+  gap: 12px;
+  padding-left: 20px;
+  margin: 16px 0;
+}
+
+.installModal li::marker {
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.installModal strong,
+.installModal p {
+  display: block;
+}
+
+.installModal strong {
+  font-size: 0.9rem;
+}
+
+.installModal p {
+  margin: 3px 0 0;
+  color: #5f6b66;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.installModal > button {
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 900;
+}
+
 .attachment {
   width: min(360px, 86%);
   margin: 0 0 12px auto;

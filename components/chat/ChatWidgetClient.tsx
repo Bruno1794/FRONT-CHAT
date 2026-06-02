@@ -113,6 +113,14 @@ function isRunningInstalledPwa() {
   );
 }
 
+function isAppleMobileDevice() {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
 function urlBase64ToUint8Array(value: string) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
   const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
@@ -291,6 +299,7 @@ export function ChatWidgetClient() {
   const [isPwaInstalled, setIsPwaInstalled] = useState(isRunningInstalledPwa);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [isInstallingPwa, setIsInstallingPwa] = useState(false);
+  const [isIosInstallModalOpen, setIsIosInstallModalOpen] = useState(false);
   const [pushState, setPushState] = useState<PushState>("idle");
   const [pushError, setPushError] = useState("");
   const [pushAlertState, setPushAlertState] = useState<PushAlertState>("idle");
@@ -767,6 +776,13 @@ export function ChatWidgetClient() {
   };
 
   const handleInstallApp = async () => {
+    if (isAppleMobileDevice()) {
+      setIsIosInstallModalOpen(true);
+      setShowInstallHelp(false);
+      setIsInstallingPwa(false);
+      return;
+    }
+
     setIsInstallingPwa(true);
     setShowInstallHelp(false);
 
@@ -1123,6 +1139,51 @@ export function ChatWidgetClient() {
       </button>
     </aside>
   ) : null;
+  const iosInstallModal = isIosInstallModalOpen ? (
+    <div
+      className={styles.installModalOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Instalar app no iPhone"
+      onClick={() => setIsIosInstallModalOpen(false)}
+    >
+      <section
+        className={styles.installModal}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span>iPhone</span>
+            <h2>Instalar na Tela de Inicio</h2>
+          </div>
+          <button
+            type="button"
+            aria-label="Fechar"
+            onClick={() => setIsIosInstallModalOpen(false)}
+          >
+            X
+          </button>
+        </header>
+        <ol>
+          <li>
+            <strong>Abra pelo Safari</strong>
+            <p>Se estiver em outro navegador, copie o link e abra no Safari.</p>
+          </li>
+          <li>
+            <strong>Toque em Compartilhar</strong>
+            <p>Use o icone de compartilhar na barra inferior do Safari.</p>
+          </li>
+          <li>
+            <strong>Escolha Adicionar à Tela de Inicio</strong>
+            <p>Confirme em Adicionar para criar o icone do app.</p>
+          </li>
+        </ol>
+        <button type="button" onClick={() => setIsIosInstallModalOpen(false)}>
+          Entendi
+        </button>
+      </section>
+    </div>
+  ) : null;
   const pushPrompt = shouldShowPushPrompt ? (
     <aside className={styles.notificationPrompt}>
       <div>
@@ -1208,6 +1269,7 @@ export function ChatWidgetClient() {
 
         {error ? <p className={styles.error}>{error}</p> : null}
         {conversation ? installPrompt : null}
+        {iosInstallModal}
         {conversation ? pushPrompt : null}
         {conversation ? pushAlertPrompt : null}
 
