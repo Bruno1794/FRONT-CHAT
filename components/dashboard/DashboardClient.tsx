@@ -72,6 +72,7 @@ export function DashboardClient() {
   const [isThreadSearchOpen, setIsThreadSearchOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
   const [activeThreadMatchIndex, setActiveThreadMatchIndex] = useState(0);
+  const [isAtMessageEnd, setIsAtMessageEnd] = useState(true);
   const [conversationPresence, setConversationPresence] = useState<
     Record<number, ConversationPresence>
   >({});
@@ -444,12 +445,47 @@ export function DashboardClient() {
       );
   }, [markConversationAsRead, selectedId, token]);
 
+  const updateMessageScrollState = useCallback(() => {
+    const element = messagesRef.current;
+
+    if (!element) {
+      setIsAtMessageEnd(true);
+      return;
+    }
+
+    const distanceFromEnd = element.scrollHeight - element.scrollTop - element.clientHeight;
+    setIsAtMessageEnd(distanceFromEnd < 32);
+  }, []);
+
+  const scrollMessagesToEnd = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const element = messagesRef.current;
+
+      if (!element) {
+        return;
+      }
+
+      element.scrollTo({
+        top: element.scrollHeight,
+        behavior,
+      });
+      window.setTimeout(updateMessageScrollState, 80);
+    },
+    [updateMessageScrollState],
+  );
+
   useEffect(() => {
-    messagesRef.current?.scrollTo({
-      top: messagesRef.current.scrollHeight,
-      behavior: "smooth",
+    const animationFrameId = window.requestAnimationFrame(() => {
+      scrollMessagesToEnd("auto");
+      window.requestAnimationFrame(() => scrollMessagesToEnd("auto"));
     });
-  }, [messages, selectedId]);
+    const timeoutId = window.setTimeout(() => scrollMessagesToEnd("auto"), 220);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [messages, selectedId, scrollMessagesToEnd]);
 
   const scrollToThreadMatch = useCallback(
     (index: number) => {
@@ -1159,6 +1195,7 @@ export function DashboardClient() {
                 setIsDraggingFiles(true);
               }}
               onDragOver={(event) => event.preventDefault()}
+              onScroll={updateMessageScrollState}
               onDragLeave={(event) => {
                 if (event.currentTarget === event.target) {
                   setIsDraggingFiles(false);
@@ -1210,6 +1247,18 @@ export function DashboardClient() {
                 <p className={styles.state}>Sem mensagens nesta conversa.</p>
               ) : null}
             </div>
+            {selectedConversation && !isAtMessageEnd ? (
+              <button
+                className={styles.scrollToEnd}
+                type="button"
+                aria-label="Ir para a ultima mensagem"
+                onClick={() => scrollMessagesToEnd()}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+            ) : null}
             <ChatInput
               disabled={!selectedConversation || selectedConversation.status === "FINALIZADA"}
               files={pendingFiles}

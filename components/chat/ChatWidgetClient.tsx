@@ -297,6 +297,7 @@ export function ChatWidgetClient() {
   const [isThreadSearchOpen, setIsThreadSearchOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
   const [activeThreadMatchIndex, setActiveThreadMatchIndex] = useState(0);
+  const [isAtMessageEnd, setIsAtMessageEnd] = useState(true);
   const [deferredInstallPrompt, setDeferredInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [isPwaInstalled, setIsPwaInstalled] = useState(isRunningInstalledPwa);
@@ -476,6 +477,35 @@ export function ChatWidgetClient() {
   useEffect(() => {
     latestMessagesRef.current = messages;
   }, [messages]);
+
+  const updateMessageScrollState = useCallback(() => {
+    const element = messagesRef.current;
+
+    if (!element) {
+      setIsAtMessageEnd(true);
+      return;
+    }
+
+    const distanceFromEnd = element.scrollHeight - element.scrollTop - element.clientHeight;
+    setIsAtMessageEnd(distanceFromEnd < 32);
+  }, []);
+
+  const scrollMessagesToEnd = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const element = messagesRef.current;
+
+      if (!element) {
+        return;
+      }
+
+      element.scrollTo({
+        top: element.scrollHeight,
+        behavior,
+      });
+      window.setTimeout(updateMessageScrollState, 80);
+    },
+    [updateMessageScrollState],
+  );
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -736,11 +766,17 @@ export function ChatWidgetClient() {
   ]);
 
   useEffect(() => {
-    messagesRef.current?.scrollTo({
-      top: messagesRef.current.scrollHeight,
-      behavior: "smooth",
+    const animationFrameId = window.requestAnimationFrame(() => {
+      scrollMessagesToEnd("auto");
+      window.requestAnimationFrame(() => scrollMessagesToEnd("auto"));
     });
-  }, [messages, conversation]);
+    const timeoutId = window.setTimeout(() => scrollMessagesToEnd("auto"), 220);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [messages, conversation, scrollMessagesToEnd]);
 
   const scrollToThreadMatch = useCallback(
     (index: number) => {
@@ -1351,6 +1387,7 @@ export function ChatWidgetClient() {
             setIsDraggingFiles(true);
           }}
           onDragOver={(event) => event.preventDefault()}
+          onScroll={updateMessageScrollState}
           onDragLeave={(event) => {
             if (event.currentTarget === event.target) {
               setIsDraggingFiles(false);
@@ -1421,6 +1458,18 @@ export function ChatWidgetClient() {
             })
           )}
         </div>
+        {conversation && !isAtMessageEnd ? (
+          <button
+            className={styles.scrollToEnd}
+            type="button"
+            aria-label="Ir para a ultima mensagem"
+            onClick={() => scrollMessagesToEnd()}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+        ) : null}
 
         {conversation ? (
           <ChatInput
