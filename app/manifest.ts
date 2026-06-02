@@ -4,8 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "SuporteSync",
     short_name: "SuporteSync",
-    description: "Painel e chat de atendimento SuporteSync.",
-    start_url: "/",
+    description: "Chat de atendimento SuporteSync.",
+    start_url: "/chat",
     scope: "/",
     display: "standalone",
     background_color: "#e8dfd5",
