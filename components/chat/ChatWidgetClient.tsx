@@ -34,7 +34,6 @@ import styles from "@/app/chat/chat.module.css";
 
 const CLIENT_CHAT_SESSION_KEY = "suportesync.clientChat";
 const CLIENT_PUSH_ENABLED_KEY = "suportesync.clientPushEnabled";
-const CLIENT_PUSHALERT_ENABLED_KEY = "suportesync.clientPushAlertEnabled";
 const PUSHALERT_SCRIPT_URL = process.env.NEXT_PUBLIC_PUSHALERT_SCRIPT_URL ?? "";
 
 type WindowWithAudioContext = Window & {
@@ -290,11 +289,6 @@ export function ChatWidgetClient() {
   const [pushError, setPushError] = useState("");
   const [pushAlertState, setPushAlertState] = useState<PushAlertState>("idle");
   const [pushAlertError, setPushAlertError] = useState("");
-  const [isPushAlertKnownActive, setIsPushAlertKnownActive] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      localStorage.getItem(CLIENT_PUSHALERT_ENABLED_KEY) === "true",
-  );
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -309,8 +303,7 @@ export function ChatWidgetClient() {
   const shouldShowPushAlertPrompt =
     Boolean(conversation) &&
     Boolean(PUSHALERT_SCRIPT_URL) &&
-    pushAlertState !== "active" &&
-    !isPushAlertKnownActive;
+    pushAlertState !== "active";
 
   const normalizeSearchValue = (value?: string | number | null) =>
     String(value ?? "")
@@ -794,8 +787,6 @@ export function ChatWidgetClient() {
           conversation_id: conversation.id,
           subscriber_id: currentSubscriberId,
         });
-        localStorage.setItem(CLIENT_PUSHALERT_ENABLED_KEY, "true");
-        setIsPushAlertKnownActive(true);
         setPushAlertState("active");
         return;
       }
@@ -849,8 +840,6 @@ export function ChatWidgetClient() {
         conversation_id: conversation.id,
         subscriber_id: subscriberId,
       });
-      localStorage.setItem(CLIENT_PUSHALERT_ENABLED_KEY, "true");
-      setIsPushAlertKnownActive(true);
       setPushAlertState("active");
     } catch (err) {
       setPushAlertError(
