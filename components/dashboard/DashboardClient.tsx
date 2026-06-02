@@ -112,6 +112,19 @@ async function subscribeBrowserToPush(registration: ServiceWorkerRegistration, p
   });
 }
 
+async function registerAdminPushSubscription(token: string) {
+  const config = await getPushConfig();
+
+  if (!config.enabled || !config.publicKey) {
+    throw new Error("Push nao esta configurado na API.");
+  }
+
+  const registration = await getServiceWorkerRegistration();
+  const subscription = await subscribeBrowserToPush(registration, config.publicKey);
+
+  await subscribeAdminToPush(token, { subscription: subscription.toJSON() });
+}
+
 export function DashboardClient() {
   useVisualViewportHeight();
 
@@ -544,6 +557,22 @@ export function DashboardClient() {
   }, [pushState, token]);
 
   useEffect(() => {
+    if (
+      !token ||
+      pushState !== "active" ||
+      typeof Notification === "undefined" ||
+      Notification.permission !== "granted"
+    ) {
+      return;
+    }
+
+    void registerAdminPushSubscription(token).catch(() => {
+      localStorage.removeItem(ADMIN_PUSH_ENABLED_KEY);
+      setPushState("ready");
+    });
+  }, [pushState, token]);
+
+  useEffect(() => {
     queueMicrotask(() => {
       const storedToken = getAccessToken();
 
@@ -614,16 +643,7 @@ export function DashboardClient() {
         return;
       }
 
-      const config = await getPushConfig();
-
-      if (!config.enabled || !config.publicKey) {
-        throw new Error("Push nao esta configurado na API.");
-      }
-
-      const registration = await getServiceWorkerRegistration();
-      const subscription = await subscribeBrowserToPush(registration, config.publicKey);
-
-      await subscribeAdminToPush(token, { subscription: subscription.toJSON() });
+      await registerAdminPushSubscription(token);
       localStorage.setItem(ADMIN_PUSH_ENABLED_KEY, "true");
       setPushState("active");
     } catch (err) {
