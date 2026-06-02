@@ -616,6 +616,14 @@ export function ChatWidgetClient() {
       socket.emit("leave_conversation", { conversation_id: conversation.id });
     };
 
+    const refreshConversationMessages = () => {
+      if (!isDocumentVisible()) {
+        return;
+      }
+
+      void loadClientMessages(conversation.id, codigoAcesso).catch(() => undefined);
+    };
+
     const pingPresence = () => {
       if (!isDocumentVisible()) {
         return;
@@ -631,6 +639,7 @@ export function ChatWidgetClient() {
     const handleVisibilityChange = () => {
       if (isDocumentVisible()) {
         joinConversation();
+        refreshConversationMessages();
         markAttendantMessagesAsRead(latestMessagesRef.current);
         return;
       }
@@ -743,12 +752,20 @@ export function ChatWidgetClient() {
       }, 12000);
     };
 
+    const handleConnect = () => {
+      joinConversation();
+      refreshConversationMessages();
+    };
+
     joinConversation();
+    refreshConversationMessages();
     const presenceIntervalId = window.setInterval(pingPresence, 5000);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", refreshConversationMessages);
+    window.addEventListener("pageshow", refreshConversationMessages);
     window.addEventListener("pagehide", leaveConversation);
     window.addEventListener("beforeunload", leaveConversation);
-    socket.on("connect", joinConversation);
+    socket.on("connect", handleConnect);
     socket.on("message_received", handleMessage);
     socket.on("message_sent", handleMessage);
     socket.on("message_read", handleMessageRead);
@@ -761,10 +778,12 @@ export function ChatWidgetClient() {
     return () => {
       window.clearInterval(presenceIntervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", refreshConversationMessages);
+      window.removeEventListener("pageshow", refreshConversationMessages);
       window.removeEventListener("pagehide", leaveConversation);
       window.removeEventListener("beforeunload", leaveConversation);
       leaveConversation();
-      socket.off("connect", joinConversation);
+      socket.off("connect", handleConnect);
       socket.off("message_received", handleMessage);
       socket.off("message_sent", handleMessage);
       socket.off("message_read", handleMessageRead);
