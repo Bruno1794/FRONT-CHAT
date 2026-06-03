@@ -68,8 +68,8 @@ self.addEventListener("push", (event) => {
   const title = payload.title || "SuporteSync";
   const options = {
     body: payload.body || "Voce recebeu uma nova mensagem.",
-    icon: payload.icon || "/icons/icon-192.png",
-    badge: payload.badge || "/icons/icon-192.png",
+    icon: payload.icon || "/icons/atendimento-192.png",
+    badge: payload.badge || "/icons/atendimento-192.png",
     tag: `suportesync-conversation-${conversationId}`,
     renotify: true,
     data: {

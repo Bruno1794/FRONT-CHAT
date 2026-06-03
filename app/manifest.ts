@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SuporteSync",
-    short_name: "SuporteSync",
+    name: "ATENDIMENTO",
+    short_name: "ATENDIMENTO",
     description: "Chat de atendimento SuporteSync.",
     start_url: "/dashboard?tab=chats",
     scope: "/",
@@ -13,25 +13,25 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     icons: [
       {
-        src: "/icons/icon-192.png",
+        src: "/icons/atendimento-192.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/icon-192.png",
+        src: "/icons/atendimento-192.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "maskable",
       },
       {
-        src: "/icons/icon-512.png",
+        src: "/icons/atendimento-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/icon-512.png",
+        src: "/icons/atendimento-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
