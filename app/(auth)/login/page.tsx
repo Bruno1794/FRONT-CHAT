@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import styles from "./login.module.css";
 
@@ -10,7 +11,9 @@ export default function LoginPage() {
           <h1>Entrar no painel</h1>
         </div>
 
-        <LoginForm />
+        <Suspense>
+          <LoginForm />
+        </Suspense>
       </section>
     </main>
   );

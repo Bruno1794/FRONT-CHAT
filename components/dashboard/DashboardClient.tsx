@@ -107,6 +107,16 @@ function isRunningInstalledPwa() {
   return window.matchMedia("(display-mode: standalone)").matches;
 }
 
+function getLoginUrlWithNext() {
+  if (typeof window === "undefined") {
+    return "/login";
+  }
+
+  const nextUrl = `${window.location.pathname}${window.location.search}`;
+
+  return `/login?next=${encodeURIComponent(nextUrl || "/dashboard?tab=chats")}`;
+}
+
 function urlBase64ToUint8Array(value: string) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
   const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
@@ -871,7 +881,7 @@ export function DashboardClient() {
       const storedToken = getAccessToken();
 
       if (!storedToken) {
-        router.replace("/login");
+        router.replace(getLoginUrlWithNext());
         return;
       }
 
@@ -883,7 +893,7 @@ export function DashboardClient() {
           setError(err instanceof Error ? err.message : "Falha ao carregar conversas.");
           if (err instanceof Error && /401|403|Unauthorized/i.test(err.message)) {
             clearAuthSession();
-            router.replace("/login");
+            router.replace(getLoginUrlWithNext());
           }
         })
         .finally(() => setIsLoading(false));

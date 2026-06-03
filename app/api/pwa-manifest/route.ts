@@ -15,8 +15,26 @@ function sanitizeStartUrl(value: string | null) {
   return DEFAULT_START_URL;
 }
 
+function getStartUrlFromReferer(request: NextRequest) {
+  const referer = request.headers.get("referer");
+
+  if (!referer) {
+    return null;
+  }
+
+  try {
+    const url = new URL(referer);
+
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return null;
+  }
+}
+
 export function GET(request: NextRequest) {
-  const startUrl = sanitizeStartUrl(request.nextUrl.searchParams.get("start_url"));
+  const requestedStartUrl =
+    request.nextUrl.searchParams.get("start_url") ?? getStartUrlFromReferer(request);
+  const startUrl = sanitizeStartUrl(requestedStartUrl);
   const manifest: MetadataRoute.Manifest = {
     name: "ATENDIMENTO",
     short_name: "ATENDIMENTO",

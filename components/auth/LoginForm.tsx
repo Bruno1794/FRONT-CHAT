@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { getAccessToken, saveAuthSession } from "@/services/authStorage";
@@ -10,6 +10,8 @@ import styles from "@/app/(auth)/login/login.module.css";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextUrl = sanitizeNextUrl(searchParams.get("next"));
   const [email, setEmail] = useState("admin@admin.com");
   const [senha, setSenha] = useState("123456");
   const [error, setError] = useState("");
@@ -17,9 +19,9 @@ export function LoginForm() {
 
   useEffect(() => {
     if (getAccessToken()) {
-      router.replace("/dashboard?tab=chats");
+      router.replace(nextUrl);
     }
-  }, [router]);
+  }, [nextUrl, router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -29,7 +31,7 @@ export function LoginForm() {
     try {
       const session = await login(email, senha);
       saveAuthSession(session);
-      router.replace("/dashboard?tab=chats");
+      router.replace(nextUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao autenticar.");
     } finally {
@@ -61,4 +63,16 @@ export function LoginForm() {
       </Button>
     </form>
   );
+}
+
+function sanitizeNextUrl(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard?tab=chats";
+  }
+
+  if (!value.startsWith("/dashboard")) {
+    return "/dashboard?tab=chats";
+  }
+
+  return value;
 }

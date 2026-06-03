@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   title: "ATENDIMENTO",
   description: "Atendimento em tempo real para equipes de suporte.",
   applicationName: "ATENDIMENTO",
+  manifest: "/api/pwa-manifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
