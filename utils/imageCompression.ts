@@ -2,6 +2,8 @@ const IMAGE_MAX_DIMENSION = 1280;
 const IMAGE_QUALITY = 0.72;
 const FALLBACK_IMAGE_MAX_DIMENSION = 960;
 const FALLBACK_IMAGE_QUALITY = 0.62;
+const EMERGENCY_IMAGE_MAX_DIMENSION = 720;
+const EMERGENCY_IMAGE_QUALITY = 0.55;
 const MIN_COMPRESS_SIZE = 180 * 1024;
 const FORCE_NORMALIZE_SIZE = 1.2 * 1024 * 1024;
 
@@ -42,7 +44,11 @@ function isCompressibleImage(file: File) {
 }
 
 function shouldForceJpegNormalization(file: File) {
-  return isHeicImage(file) || file.size >= FORCE_NORMALIZE_SIZE;
+  return isHeicImage(file) || isGenericCameraImage(file) || file.size >= FORCE_NORMALIZE_SIZE;
+}
+
+function isGenericCameraImage(file: File) {
+  return /^(image|photo|captured|camera|foto)\.jpe?g$/i.test(file.name);
 }
 
 function getCompressedName(file: File) {
@@ -51,7 +57,11 @@ function getCompressedName(file: File) {
     .replace(/[^\w.-]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  return `${baseName || "imagem"}.jpg`;
+  if (!baseName || isGenericCameraImage(file) || isHeicImage(file)) {
+    return `atendimento-${Date.now().toString(36)}.jpg`;
+  }
+
+  return `${baseName}.jpg`;
 }
 
 async function loadImage(file: File) {
@@ -172,6 +182,31 @@ export async function compressImageFile(file: File) {
     }
 
     return file;
+  } catch {
+    return file;
+  }
+}
+
+export async function prepareEmergencyImageForUpload(file: File) {
+  if (!isImageFile(file)) {
+    return file;
+  }
+
+  try {
+    const blob = await drawToJpeg(
+      file,
+      EMERGENCY_IMAGE_MAX_DIMENSION,
+      EMERGENCY_IMAGE_QUALITY,
+    );
+
+    if (!blob) {
+      return file;
+    }
+
+    return new File([blob], `atendimento-${Date.now().toString(36)}.jpg`, {
+      lastModified: Date.now(),
+      type: "image/jpeg",
+    });
   } catch {
     return file;
   }

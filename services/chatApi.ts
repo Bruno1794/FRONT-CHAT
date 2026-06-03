@@ -15,7 +15,10 @@ import type {
   UploadResponse,
   User,
 } from "@/types";
-import { prepareFileForUpload } from "@/utils/imageCompression";
+import {
+  prepareEmergencyImageForUpload,
+  prepareFileForUpload,
+} from "@/utils/imageCompression";
 import { getApiUrl } from "./api";
 
 const DIRECT_UPLOAD_SIZE = 3.5 * 1024 * 1024;
@@ -416,28 +419,32 @@ async function readUploadError(response: Response) {
   }
 }
 
-export async function uploadFile(file: File, token?: string) {
-  const preparedFile = await prepareFileForUpload(file);
-  let response: Response;
-  const shouldUploadDirectly =
-    isImageUpload(preparedFile) || preparedFile.size >= DIRECT_UPLOAD_SIZE;
+async function uploadPreparedFile(file: File, token?: string) {
+  const shouldUploadDirectly = isImageUpload(file) || file.size >= DIRECT_UPLOAD_SIZE;
 
   try {
-    response = await postUploadFile(
+    return await postUploadFile(
       shouldUploadDirectly ? `${getApiUrl()}/upload` : "/api/upload",
-      preparedFile,
+      file,
       token,
     );
   } catch {
-    try {
-      response = await postUploadFile(
-        shouldUploadDirectly ? "/api/upload" : `${getApiUrl()}/upload`,
-        preparedFile,
-        token,
-      );
-    } catch {
-      throw new Error(`Falha ao enviar ${file.name}: conexao com upload falhou.`);
-    }
+    return postUploadFile(
+      shouldUploadDirectly ? "/api/upload" : `${getApiUrl()}/upload`,
+      file,
+      token,
+    );
+  }
+}
+
+export async function uploadFile(file: File, token?: string) {
+  const preparedFile = await prepareFileForUpload(file);
+  let response: Response;
+
+  try {
+    response = await uploadPreparedFile(preparedFile, token);
+  } catch {
+    throw new Error(`Falha ao enviar ${file.name}: conexao com upload falhou.`);
   }
 
   if (!response.ok && [413, 502, 504].includes(response.status)) {
@@ -445,6 +452,18 @@ export async function uploadFile(file: File, token?: string) {
       response = await postUploadFile(`${getApiUrl()}/upload`, preparedFile, token);
     } catch {
       // Keep the proxy response so the API error can be shown below.
+    }
+  }
+
+  if (!response.ok && isImageUpload(file)) {
+    const emergencyFile = await prepareEmergencyImageForUpload(file);
+
+    if (emergencyFile !== file) {
+      try {
+        response = await uploadPreparedFile(emergencyFile, token);
+      } catch {
+        // Keep the original response so the API error can be shown below.
+      }
     }
   }
 
