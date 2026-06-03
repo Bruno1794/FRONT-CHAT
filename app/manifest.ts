@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "SuporteSync",
     short_name: "SuporteSync",
     description: "Chat de atendimento SuporteSync.",
-    start_url: "/",
+    start_url: "/dashboard?tab=chats",
     scope: "/",
     display: "standalone",
     background_color: "#e8dfd5",
