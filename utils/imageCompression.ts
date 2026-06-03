@@ -11,11 +11,35 @@ function isImageFile(file: File) {
   );
 }
 
+function isIosDevice() {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+function isHeicImage(file: File) {
+  const name = file.name.toLowerCase();
+
+  return (
+    file.type === "image/heic" ||
+    file.type === "image/heif" ||
+    name.endsWith(".heic") ||
+    name.endsWith(".heif")
+  );
+}
+
 function isCompressibleImage(file: File) {
   const name = file.name.toLowerCase();
 
   if (
     !isImageFile(file) ||
+    isIosDevice() ||
+    isHeicImage(file) ||
     file.type === "image/gif" ||
     file.type === "image/svg+xml" ||
     name.endsWith(".gif") ||
@@ -56,6 +80,34 @@ async function loadImage(file: File) {
   }
 }
 
+function isCanvasMostlyBlank(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) {
+  const stepX = Math.max(1, Math.floor(width / 18));
+  const stepY = Math.max(1, Math.floor(height / 18));
+  let checked = 0;
+  let visiblePixels = 0;
+
+  try {
+    for (let y = Math.floor(stepY / 2); y < height; y += stepY) {
+      for (let x = Math.floor(stepX / 2); x < width; x += stepX) {
+        const [red, green, blue, alpha] = context.getImageData(x, y, 1, 1).data;
+        checked += 1;
+
+        if (alpha > 8 && !(red > 248 && green > 248 && blue > 248)) {
+          visiblePixels += 1;
+        }
+      }
+    }
+  } catch {
+    return false;
+  }
+
+  return checked > 0 && visiblePixels / checked < 0.015;
+}
+
 async function drawToJpeg(file: File, maxDimension: number, quality: number) {
   const image = await loadImage(file);
   const scale = Math.min(
@@ -78,6 +130,10 @@ async function drawToJpeg(file: File, maxDimension: number, quality: number) {
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
+
+  if (isCanvasMostlyBlank(context, width, height)) {
+    return null;
+  }
 
   return new Promise<Blob | null>((resolve) => {
     canvas.toBlob(resolve, "image/jpeg", quality);
