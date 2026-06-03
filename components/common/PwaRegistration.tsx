@@ -1,6 +1,42 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+
+const ACCESS_TOKEN_KEY = "suportesync.accessToken";
+const CLIENT_CHAT_SESSION_KEY = "suportesync.clientChat";
+
+type NavigatorWithStandalone = Navigator & {
+  standalone?: boolean;
+};
+
+type StoredClientChat = {
+  code?: string;
+};
+
+function isRunningInstalledPwa() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((navigator as NavigatorWithStandalone).standalone)
+  );
+}
+
+function getStoredClientCode() {
+  const stored =
+    localStorage.getItem(CLIENT_CHAT_SESSION_KEY) ??
+    sessionStorage.getItem(CLIENT_CHAT_SESSION_KEY);
+
+  if (!stored) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(stored) as StoredClientChat;
+    return parsed.code?.trim() || null;
+  } catch {
+    return null;
+  }
+}
 
 function getInstallStartUrl() {
   const currentPath = `${window.location.pathname}${window.location.search}`;
@@ -10,6 +46,24 @@ function getInstallStartUrl() {
   }
 
   return "/dashboard?tab=chats";
+}
+
+function redirectInstalledClientShortcut() {
+  if (!isRunningInstalledPwa() || window.location.pathname.startsWith("/chat")) {
+    return;
+  }
+
+  if (localStorage.getItem(ACCESS_TOKEN_KEY)) {
+    return;
+  }
+
+  const storedCode = getStoredClientCode();
+
+  if (!storedCode) {
+    return;
+  }
+
+  window.location.replace(`/chat?code=${encodeURIComponent(storedCode)}`);
 }
 
 function updateManifestForCurrentRoute() {
@@ -27,6 +81,13 @@ function updateManifestForCurrentRoute() {
 }
 
 export function PwaRegistration() {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    updateManifestForCurrentRoute();
+    redirectInstalledClientShortcut();
+  }, [pathname]);
+
   useEffect(() => {
     updateManifestForCurrentRoute();
 
