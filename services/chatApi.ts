@@ -18,6 +18,8 @@ import type {
 import { prepareFileForUpload } from "@/utils/imageCompression";
 import { getApiUrl } from "./api";
 
+const DIRECT_UPLOAD_SIZE = 3.5 * 1024 * 1024;
+
 export function login(email: string, senha: string) {
   return apiFetch<AuthResponse>("/auth/login", {
     method: "POST",
@@ -389,12 +391,21 @@ async function readUploadError(response: Response) {
 export async function uploadFile(file: File, token?: string) {
   const preparedFile = await prepareFileForUpload(file);
   let response: Response;
+  const shouldUploadDirectly = preparedFile.size >= DIRECT_UPLOAD_SIZE;
 
   try {
-    response = await postUploadFile("/api/upload", preparedFile, token);
+    response = await postUploadFile(
+      shouldUploadDirectly ? `${getApiUrl()}/upload` : "/api/upload",
+      preparedFile,
+      token,
+    );
   } catch {
     try {
-      response = await postUploadFile(`${getApiUrl()}/upload`, preparedFile, token);
+      response = await postUploadFile(
+        shouldUploadDirectly ? "/api/upload" : `${getApiUrl()}/upload`,
+        preparedFile,
+        token,
+      );
     } catch {
       throw new Error(`Falha ao enviar ${file.name}: conexao com upload falhou.`);
     }

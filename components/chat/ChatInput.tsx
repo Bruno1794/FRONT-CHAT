@@ -505,7 +505,7 @@ export function ChatInput({
         ref={fileInputRef}
         className={styles.fileInput}
         type="file"
-        accept="image/*,audio/*,video/*,.pdf,.zip,.rar,.apk,.doc,.docx,.xls,.xlsx,.txt"
+        accept="image/jpeg,image/png,image/webp,image/*,audio/*,video/*,.pdf,.zip,.rar,.apk,.doc,.docx,.xls,.xlsx,.txt"
         multiple
         onChange={handleFileChange}
       />
