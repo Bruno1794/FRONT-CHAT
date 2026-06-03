@@ -60,6 +60,7 @@ type PushAlertQueueItem = [string, (...args: unknown[]) => void];
 
 type PushAlertSuccessResult = {
   subscriber_id?: string;
+  subs_id?: string;
   alreadySubscribed?: boolean;
 };
 
@@ -224,6 +225,98 @@ function getPushAlertSubscriberId() {
   const info = window.PushAlertCo?.getSubsInfo?.();
 
   return info?.subs_id || window.PushAlertCo?.subs_id || "";
+}
+
+function getPushAlertSuccessSubscriberId(result: unknown) {
+  const successResult = result as PushAlertSuccessResult;
+
+  return (
+    successResult.subscriber_id ||
+    successResult.subs_id ||
+    getPushAlertSubscriberId()
+  );
+}
+
+function waitForPushAlertSubscription() {
+  return new Promise<string>((resolve, reject) => {
+    let settled = false;
+    const finish = (subscriberId: string) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+      resolve(subscriberId);
+    };
+    const fail = (error: Error) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+      reject(error);
+    };
+    const checkCurrentSubscription = () => {
+      const subscriberId = getPushAlertSubscriberId();
+
+      if (subscriberId) {
+        finish(subscriberId);
+      }
+    };
+    const intervalId = window.setInterval(checkCurrentSubscription, 700);
+    const timeoutId = window.setTimeout(() => {
+      checkCurrentSubscription();
+
+      if (!settled) {
+        fail(
+          new Error(
+            "PushAlert nao concluiu a assinatura. Confira se o dominio atendimento.sytes.net esta cadastrado no PushAlert e tente novamente.",
+          ),
+        );
+      }
+    }, 30000);
+
+    window.pushalertbyiw = window.pushalertbyiw || [];
+    window.pushalertbyiw.push([
+      "onSuccess",
+      (result: unknown) => {
+        const subscriberId = getPushAlertSuccessSubscriberId(result);
+
+        if (subscriberId) {
+          finish(subscriberId);
+          return;
+        }
+
+        checkCurrentSubscription();
+      },
+    ]);
+    window.pushalertbyiw.push([
+      "onFailure",
+      (result: unknown) => {
+        const failureResult = result as PushAlertFailureResult;
+        fail(
+          new Error(
+            failureResult.status === -1
+              ? "Notificacoes bloqueadas neste navegador."
+              : "Assinatura PushAlert cancelada ou indisponivel.",
+          ),
+        );
+      },
+    ]);
+
+    checkCurrentSubscription();
+
+    if (!window.PushAlertCo?.forceSubscribe) {
+      fail(new Error("PushAlert nao disponibilizou a permissao."));
+      return;
+    }
+
+    window.PushAlertCo.forceSubscribe();
+  });
 }
 
 function isDocumentVisible() {
@@ -966,49 +1059,7 @@ export function ChatWidgetClient() {
         return;
       }
 
-      const subscriberId = await new Promise<string>((resolve, reject) => {
-        window.pushalertbyiw = window.pushalertbyiw || [];
-        window.pushalertbyiw.push([
-          "onSuccess",
-          (result: unknown) => {
-            const successResult = result as PushAlertSuccessResult;
-            const nextSubscriberId =
-              successResult.subscriber_id || getPushAlertSubscriberId();
-
-            if (nextSubscriberId) {
-              resolve(nextSubscriberId);
-              return;
-            }
-
-            reject(new Error("PushAlert nao retornou o subscriber_id."));
-          },
-        ]);
-        window.pushalertbyiw.push([
-          "onFailure",
-          (result: unknown) => {
-            const failureResult = result as PushAlertFailureResult;
-            reject(
-              new Error(
-                failureResult.status === -1
-                  ? "Notificacoes bloqueadas neste navegador."
-                  : "Assinatura PushAlert cancelada ou indisponivel.",
-              ),
-            );
-          },
-        ]);
-
-        window.PushAlertCo?.forceSubscribe?.();
-        window.setTimeout(() => {
-          const fallbackSubscriberId = getPushAlertSubscriberId();
-
-          if (fallbackSubscriberId) {
-            resolve(fallbackSubscriberId);
-            return;
-          }
-
-          reject(new Error("PushAlert nao concluiu a assinatura."));
-        }, 15000);
-      });
+      const subscriberId = await waitForPushAlertSubscription();
 
       await subscribeToPushAlert({
         codigo: codigoAcesso,
