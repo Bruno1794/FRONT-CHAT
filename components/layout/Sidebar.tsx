@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -47,7 +48,14 @@ export function Sidebar({ hideMobileMenuButton = false }: Props) {
       ) : null}
       <aside className={`${styles.sidebar} ${isMenuOpen ? styles.open : ""}`}>
         <Link className={styles.brand} href="/" onClick={() => setIsMenuOpen(false)}>
-          SuporteSync
+          <Image
+            alt=""
+            aria-hidden="true"
+            height={40}
+            src="/icons/atendimento-192.png"
+            width={40}
+          />
+          <span>ATENDIMENTO</span>
         </Link>
         <nav className={styles.nav} aria-label="Navegacao principal">
           {navItems.map((item) => (
