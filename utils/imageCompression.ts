@@ -1,6 +1,9 @@
 const IMAGE_MAX_DIMENSION = 1280;
 const IMAGE_QUALITY = 0.72;
+const FALLBACK_IMAGE_MAX_DIMENSION = 960;
+const FALLBACK_IMAGE_QUALITY = 0.62;
 const MIN_COMPRESS_SIZE = 180 * 1024;
+const FORCE_NORMALIZE_SIZE = 1.2 * 1024 * 1024;
 
 function isImageFile(file: File) {
   const name = file.name.toLowerCase();
@@ -27,7 +30,6 @@ function isCompressibleImage(file: File) {
 
   if (
     !isImageFile(file) ||
-    isHeicImage(file) ||
     file.type === "image/gif" ||
     file.type === "image/svg+xml" ||
     name.endsWith(".gif") ||
@@ -36,7 +38,11 @@ function isCompressibleImage(file: File) {
     return false;
   }
 
-  return file.size >= MIN_COMPRESS_SIZE;
+  return file.size >= MIN_COMPRESS_SIZE || isHeicImage(file);
+}
+
+function shouldForceJpegNormalization(file: File) {
+  return isHeicImage(file) || file.size >= FORCE_NORMALIZE_SIZE;
 }
 
 function getCompressedName(file: File) {
@@ -128,6 +134,13 @@ async function drawToJpeg(file: File, maxDimension: number, quality: number) {
   });
 }
 
+function buildJpegFile(file: File, blob: Blob) {
+  return new File([blob], getCompressedName(file), {
+    lastModified: file.lastModified,
+    type: "image/jpeg",
+  });
+}
+
 export async function compressImageFile(file: File) {
   if (!isCompressibleImage(file)) {
     return file;
@@ -136,14 +149,29 @@ export async function compressImageFile(file: File) {
   try {
     const blob = await drawToJpeg(file, IMAGE_MAX_DIMENSION, IMAGE_QUALITY);
 
-    if (!blob || blob.size >= file.size) {
+    if (blob && blob.size < file.size) {
+      return buildJpegFile(file, blob);
+    }
+
+    if (!shouldForceJpegNormalization(file)) {
       return file;
     }
 
-    return new File([blob], getCompressedName(file), {
-      lastModified: file.lastModified,
-      type: "image/jpeg",
-    });
+    const fallbackBlob = await drawToJpeg(
+      file,
+      FALLBACK_IMAGE_MAX_DIMENSION,
+      FALLBACK_IMAGE_QUALITY,
+    );
+
+    if (!fallbackBlob) {
+      return file;
+    }
+
+    if (fallbackBlob.size < file.size || isHeicImage(file)) {
+      return buildJpegFile(file, fallbackBlob);
+    }
+
+    return file;
   } catch {
     return file;
   }

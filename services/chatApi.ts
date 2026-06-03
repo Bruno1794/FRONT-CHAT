@@ -15,6 +15,7 @@ import type {
   User,
 } from "@/types";
 import { prepareFileForUpload } from "@/utils/imageCompression";
+import { getApiUrl } from "./api";
 
 export function login(email: string, senha: string) {
   return apiFetch<AuthResponse>("/auth/login", {
@@ -346,26 +347,50 @@ export function deleteMessage(payload: {
   });
 }
 
-export async function uploadFile(file: File, token?: string) {
-  const preparedFile = await prepareFileForUpload(file);
+async function postUploadFile(uploadUrl: string, file: File, token?: string) {
   const formData = new FormData();
-  formData.append("file", preparedFile, preparedFile.name);
+  formData.append("file", file, file.name);
 
-  const response = await fetch("/api/upload", {
+  return fetch(uploadUrl, {
     method: "POST",
     body: formData,
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
+}
+
+async function readUploadError(response: Response) {
+  try {
+    const errorBody = (await response.json()) as { message?: string; error?: string };
+    return errorBody.message ?? errorBody.error ?? "";
+  } catch {
+    return response.text().catch(() => "");
+  }
+}
+
+export async function uploadFile(file: File, token?: string) {
+  const preparedFile = await prepareFileForUpload(file);
+  let response: Response;
+
+  try {
+    response = await postUploadFile("/api/upload", preparedFile, token);
+  } catch {
+    try {
+      response = await postUploadFile(`${getApiUrl()}/upload`, preparedFile, token);
+    } catch {
+      throw new Error(`Falha ao enviar ${file.name}: conexao com upload falhou.`);
+    }
+  }
+
+  if (!response.ok && [413, 502, 504].includes(response.status)) {
+    try {
+      response = await postUploadFile(`${getApiUrl()}/upload`, preparedFile, token);
+    } catch {
+      // Keep the proxy response so the API error can be shown below.
+    }
+  }
 
   if (!response.ok) {
-    let detail = "";
-
-    try {
-      const errorBody = (await response.json()) as { message?: string; error?: string };
-      detail = errorBody.message ?? errorBody.error ?? "";
-    } catch {
-      detail = await response.text().catch(() => "");
-    }
+    const detail = await readUploadError(response);
 
     throw new Error(
       detail ? `Falha ao enviar ${file.name}: ${detail}` : `Falha ao enviar ${file.name}.`,
