@@ -368,14 +368,42 @@ export function deleteMessage(payload: {
   });
 }
 
-async function postUploadFile(uploadUrl: string, file: File, token?: string) {
+function isImageUpload(file: File) {
+  return file.type.startsWith("image/") || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
+}
+
+function postUploadFile(uploadUrl: string, file: File, token?: string) {
   const formData = new FormData();
   formData.append("file", file, file.name);
 
-  return fetch(uploadUrl, {
-    method: "POST",
-    body: formData,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  return new Promise<Response>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+
+    request.open("POST", uploadUrl);
+
+    if (token) {
+      request.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
+
+    request.responseType = "text";
+    request.timeout = 120000;
+
+    request.onload = () => {
+      resolve(
+        new Response(request.responseText, {
+          status: request.status,
+          statusText: request.statusText,
+          headers: {
+            "content-type": request.getResponseHeader("content-type") ?? "application/json",
+          },
+        }),
+      );
+    };
+
+    request.onerror = () => reject(new Error("Upload connection failed"));
+    request.ontimeout = () => reject(new Error("Upload timeout"));
+    request.onabort = () => reject(new Error("Upload aborted"));
+    request.send(formData);
   });
 }
 
@@ -391,7 +419,8 @@ async function readUploadError(response: Response) {
 export async function uploadFile(file: File, token?: string) {
   const preparedFile = await prepareFileForUpload(file);
   let response: Response;
-  const shouldUploadDirectly = preparedFile.size >= DIRECT_UPLOAD_SIZE;
+  const shouldUploadDirectly =
+    isImageUpload(preparedFile) || preparedFile.size >= DIRECT_UPLOAD_SIZE;
 
   try {
     response = await postUploadFile(
