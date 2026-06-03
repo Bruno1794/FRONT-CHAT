@@ -11,17 +11,6 @@ function isImageFile(file: File) {
   );
 }
 
-function isIosDevice() {
-  if (typeof navigator === "undefined") {
-    return false;
-  }
-
-  return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
-}
-
 function isHeicImage(file: File) {
   const name = file.name.toLowerCase();
 
@@ -38,7 +27,6 @@ function isCompressibleImage(file: File) {
 
   if (
     !isImageFile(file) ||
-    isIosDevice() ||
     isHeicImage(file) ||
     file.type === "image/gif" ||
     file.type === "image/svg+xml" ||

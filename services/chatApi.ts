@@ -15,7 +15,6 @@ import type {
   User,
 } from "@/types";
 import { prepareFileForUpload } from "@/utils/imageCompression";
-import { getApiUrl } from "./api";
 
 export function login(email: string, senha: string) {
   return apiFetch<AuthResponse>("/auth/login", {
@@ -350,10 +349,9 @@ export function deleteMessage(payload: {
 export async function uploadFile(file: File, token?: string) {
   const preparedFile = await prepareFileForUpload(file);
   const formData = new FormData();
-  formData.append("file", preparedFile);
+  formData.append("file", preparedFile, preparedFile.name);
 
-  const uploadUrl = `${getApiUrl()}/upload`;
-  const response = await fetch(uploadUrl, {
+  const response = await fetch("/api/upload", {
     method: "POST",
     body: formData,
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
