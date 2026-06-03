@@ -3,6 +3,8 @@
 import { FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  changePassword,
+  clearSystemData,
   createShortcut,
   deleteShortcut,
   getClientAccessLink,
@@ -26,12 +28,24 @@ type FormState = {
   global: boolean;
 };
 
+type PasswordFormState = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
 const emptyForm: FormState = {
   shortcut: "",
   title: "",
   message: "",
   active: true,
   global: false,
+};
+
+const emptyPasswordForm: PasswordFormState = {
+  currentPassword: "",
+  newPassword: "",
+  confirmPassword: "",
 };
 
 export function ShortcutSettings({ token, user, notificationContent }: Props) {
@@ -51,6 +65,14 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
   const [isGeneratingAccess, setIsGeneratingAccess] = useState(false);
   const [accessError, setAccessError] = useState("");
   const [copyFeedback, setCopyFeedback] = useState("");
+  const [passwordForm, setPasswordForm] = useState<PasswordFormState>(emptyPasswordForm);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [clearConfirmation, setClearConfirmation] = useState("");
+  const [isClearingData, setIsClearingData] = useState(false);
+  const [clearFeedback, setClearFeedback] = useState("");
+  const [clearError, setClearError] = useState("");
 
   const loadShortcuts = useCallback(async () => {
     if (!token) {
@@ -215,6 +237,73 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     ? `Ola! Para falar com nosso atendimento, acesse: ${clientAccess.url}`
     : "";
 
+  const handleChangePassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!token || isChangingPassword) {
+      return;
+    }
+
+    setPasswordFeedback("");
+    setPasswordError("");
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError("A nova senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("A confirmacao da senha nao confere.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      await changePassword(token, {
+        senha_atual: passwordForm.currentPassword,
+        nova_senha: passwordForm.newPassword,
+      });
+      setPasswordForm(emptyPasswordForm);
+      setPasswordFeedback("Senha atualizada com sucesso.");
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Falha ao atualizar senha.");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleClearSystemData = async () => {
+    if (!token || user?.role !== "ADMIN" || isClearingData || clearConfirmation !== "LIMPAR") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Esta acao apaga conversas, mensagens, anexos, notas e inscricoes push. Usuarios e atalhos serao mantidos. Continuar?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsClearingData(true);
+    setClearFeedback("");
+    setClearError("");
+
+    try {
+      const result = await clearSystemData(token);
+      const deletedTotal = Object.values(result.deleted).reduce((total, value) => total + value, 0);
+      setClearConfirmation("");
+      setClearFeedback(
+        `Limpeza concluida. ${deletedTotal} registros removidos. Mantidos: ${result.preserved.join(", ")}.`,
+      );
+    } catch (err) {
+      setClearError(err instanceof Error ? err.message : "Falha ao limpar dados.");
+    } finally {
+      setIsClearingData(false);
+    }
+  };
+
   return (
     <div className={styles.settingsView}>
       <header className={styles.settingsHeader}>
@@ -229,6 +318,69 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
       </header>
 
       {notificationContent}
+
+      <section className={styles.accountSettings}>
+        <div className={styles.clientAccessHeader}>
+          <div>
+            <span>Conta</span>
+            <h2>Alterar senha</h2>
+            <p>Atualize a senha do usuario administrativo logado.</p>
+          </div>
+        </div>
+
+        <form className={styles.passwordForm} onSubmit={handleChangePassword}>
+          <label>
+            Senha atual
+            <input
+              autoComplete="current-password"
+              type="password"
+              value={passwordForm.currentPassword}
+              onChange={(event) =>
+                setPasswordForm((current) => ({
+                  ...current,
+                  currentPassword: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label>
+            Nova senha
+            <input
+              autoComplete="new-password"
+              type="password"
+              value={passwordForm.newPassword}
+              onChange={(event) =>
+                setPasswordForm((current) => ({
+                  ...current,
+                  newPassword: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label>
+            Confirmar senha
+            <input
+              autoComplete="new-password"
+              type="password"
+              value={passwordForm.confirmPassword}
+              onChange={(event) =>
+                setPasswordForm((current) => ({
+                  ...current,
+                  confirmPassword: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <button disabled={isChangingPassword} type="submit">
+            {isChangingPassword ? "Salvando..." : "Alterar senha"}
+          </button>
+        </form>
+
+        {passwordError ? <p className={styles.clientAccessError}>{passwordError}</p> : null}
+        {passwordFeedback ? (
+          <p className={styles.clientAccessFeedback}>{passwordFeedback}</p>
+        ) : null}
+      </section>
 
       <section className={styles.clientAccessSettings}>
         <div className={styles.clientAccessHeader}>
@@ -305,6 +457,43 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
           </div>
         ) : null}
       </section>
+
+      {user?.role === "ADMIN" ? (
+        <section className={styles.dangerSettings}>
+          <div className={styles.clientAccessHeader}>
+            <div>
+              <span>Manutencao</span>
+              <h2>Limpar dados do atendimento</h2>
+              <p>
+                Remove conversas, mensagens, anexos, notas, reacoes e inscricoes push.
+                Usuarios e atalhos cadastrados serao mantidos.
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.clearDataForm}>
+            <label>
+              Digite LIMPAR para confirmar
+              <input
+                value={clearConfirmation}
+                onChange={(event) => setClearConfirmation(event.target.value)}
+              />
+            </label>
+            <button
+              disabled={isClearingData || clearConfirmation !== "LIMPAR"}
+              type="button"
+              onClick={() => void handleClearSystemData()}
+            >
+              {isClearingData ? "Limpando..." : "Limpar dados"}
+            </button>
+          </div>
+
+          {clearError ? <p className={styles.clientAccessError}>{clearError}</p> : null}
+          {clearFeedback ? (
+            <p className={styles.clientAccessFeedback}>{clearFeedback}</p>
+          ) : null}
+        </section>
+      ) : null}
 
       <div className={styles.settingsToolbar}>
         <input

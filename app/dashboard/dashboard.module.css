@@ -210,6 +210,8 @@
 .notificationActions button,
 .clientAccessForm button,
 .clientAccessActions button,
+.passwordForm button,
+.clearDataForm button,
 .settingsToolbar button,
 .shortcutActions button,
 .shortcutModal footer button {
@@ -231,6 +233,8 @@
 .notificationActions button:hover,
 .clientAccessForm button:hover,
 .clientAccessActions button:hover,
+.passwordForm button:hover,
+.clearDataForm button:hover,
 .settingsToolbar button:hover,
 .shortcutActions button:hover,
 .shortcutModal footer button:hover {
@@ -331,6 +335,23 @@
   box-shadow: 0 12px 30px rgba(16, 35, 29, 0.06);
 }
 
+.accountSettings,
+.dangerSettings {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  border: 1px solid #dfe8e4;
+  border-radius: 12px;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(16, 35, 29, 0.06);
+}
+
+.dangerSettings {
+  border-color: #fecaca;
+  background: #fffafa;
+}
+
 .clientAccessHeader h2 {
   margin: 10px 0 5px;
   color: #10231d;
@@ -352,7 +373,23 @@
   align-items: end;
 }
 
+.passwordForm {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.clearDataForm {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) auto;
+  gap: 10px;
+  align-items: end;
+}
+
 .clientAccessForm label,
+.passwordForm label,
+.clearDataForm label,
 .clientAccessLinkBox label {
   display: grid;
   gap: 7px;
@@ -366,7 +403,23 @@
   padding: 0 16px;
 }
 
-.clientAccessForm button:disabled {
+.passwordForm button,
+.clearDataForm button {
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.clearDataForm button {
+  background: #b42318;
+}
+
+.clearDataForm button:hover {
+  box-shadow: 0 10px 22px rgba(180, 35, 24, 0.16);
+}
+
+.clientAccessForm button:disabled,
+.passwordForm button:disabled,
+.clearDataForm button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }
@@ -449,6 +502,8 @@
 
 .settingsToolbar input,
 .clientAccessForm input,
+.passwordForm input,
+.clearDataForm input,
 .clientAccessLinkBox input,
 .clientAccessLinkBox textarea,
 .shortcutModal input,
@@ -466,6 +521,8 @@
 
 .settingsToolbar input:focus,
 .clientAccessForm input:focus,
+.passwordForm input:focus,
+.clearDataForm input:focus,
 .clientAccessLinkBox input:focus,
 .clientAccessLinkBox textarea:focus,
 .shortcutModal input:focus,
@@ -481,6 +538,8 @@
 }
 
 .clientAccessForm input,
+.passwordForm input,
+.clearDataForm input,
 .clientAccessLinkBox input {
   min-height: 40px;
   padding: 0 12px;
@@ -1512,6 +1571,8 @@
   }
 
   .clientAccessForm,
+  .passwordForm,
+  .clearDataForm,
   .clientAccessActions {
     grid-template-columns: 1fr;
   }

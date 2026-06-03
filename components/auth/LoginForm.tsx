@@ -12,8 +12,8 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = sanitizeNextUrl(searchParams.get("next"));
-  const [email, setEmail] = useState("admin@admin.com");
-  const [senha, setSenha] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 

@@ -130,6 +130,12 @@ export interface ClientAccessLink {
   url: string;
 }
 
+export interface ClearDataResult {
+  success: boolean;
+  preserved: string[];
+  deleted: Record<string, number>;
+}
+
 export interface Conversation {
   id: number;
   cliente_id_externo: string;

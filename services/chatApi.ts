@@ -4,6 +4,7 @@ import type {
   AuthResponse,
   BroadcastNoticeResult,
   ClientAccessLink,
+  ClearDataResult,
   Conversation,
   ConversationDetails,
   ConversationStatus,
@@ -33,6 +34,24 @@ export function logout(token: string) {
 
 export function getMe(token: string) {
   return apiFetch<User>("/auth/me", { token });
+}
+
+export function changePassword(
+  token: string,
+  payload: { senha_atual: string; nova_senha: string },
+) {
+  return apiFetch<{ success: boolean }>("/auth/password", {
+    method: "PUT",
+    token,
+    json: payload,
+  });
+}
+
+export function clearSystemData(token: string) {
+  return apiFetch<ClearDataResult>("/maintenance/clear-data", {
+    method: "POST",
+    token,
+  });
 }
 
 export function getConversations(token: string, search?: string) {
