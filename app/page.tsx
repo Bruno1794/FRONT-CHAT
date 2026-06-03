@@ -1,5 +1,17 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getAccessToken } from "@/services/authStorage";
 
 export default function Home() {
-  redirect("/chat");
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = getAccessToken();
+
+    router.replace(token ? "/dashboard?tab=chats" : "/chat");
+  }, [router]);
+
+  return null;
 }
