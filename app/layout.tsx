@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SuporteSync",
+  title: "ATENDIMENTO",
   description: "Atendimento em tempo real para equipes de suporte.",
   applicationName: "ATENDIMENTO",
   appleWebApp: {
