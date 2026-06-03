@@ -182,6 +182,7 @@
 }
 
 .settingsHeader span,
+.clientAccessHeader span,
 .shortcutModal header span {
   display: inline-flex;
   width: fit-content;
@@ -207,6 +208,8 @@
 
 .settingsHeader button,
 .notificationActions button,
+.clientAccessForm button,
+.clientAccessActions button,
 .settingsToolbar button,
 .shortcutActions button,
 .shortcutModal footer button {
@@ -226,6 +229,8 @@
 
 .settingsHeader button:hover,
 .notificationActions button:hover,
+.clientAccessForm button:hover,
+.clientAccessActions button:hover,
 .settingsToolbar button:hover,
 .shortcutActions button:hover,
 .shortcutModal footer button:hover {
@@ -315,6 +320,126 @@
   opacity: 0.65;
 }
 
+.clientAccessSettings {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  border: 1px solid #dfe8e4;
+  border-radius: 12px;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(16, 35, 29, 0.06);
+}
+
+.clientAccessHeader h2 {
+  margin: 10px 0 5px;
+  color: #10231d;
+  font-size: 1.05rem;
+}
+
+.clientAccessHeader p {
+  max-width: 760px;
+  margin: 0;
+  color: #5a6762;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.clientAccessForm {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.clientAccessForm label,
+.clientAccessLinkBox label {
+  display: grid;
+  gap: 7px;
+  color: #33403c;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.clientAccessForm button {
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.clientAccessForm button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.clientAccessResult {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dfe8e4;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fbfa;
+}
+
+.clientAccessMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.clientAccessMeta span {
+  background: #e2f7ed;
+}
+
+.clientAccessMeta small {
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #eef2f0;
+  color: #52605b;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.clientAccessLinkBox {
+  display: grid;
+  gap: 10px;
+}
+
+.clientAccessLinkBox textarea {
+  min-height: 78px;
+  resize: vertical;
+  padding: 10px 12px;
+  line-height: 1.4;
+}
+
+.clientAccessActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.clientAccessActions button {
+  min-height: 34px;
+  padding: 0 13px;
+  background: #eef4f1;
+  color: #173b31;
+}
+
+.clientAccessFeedback,
+.clientAccessError {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.clientAccessFeedback {
+  color: #007a4d;
+}
+
+.clientAccessError {
+  color: #b42318;
+}
+
 .settingsToolbar {
   display: grid;
   grid-template-columns: minmax(0, 420px) auto;
@@ -323,6 +448,9 @@
 }
 
 .settingsToolbar input,
+.clientAccessForm input,
+.clientAccessLinkBox input,
+.clientAccessLinkBox textarea,
 .shortcutModal input,
 .shortcutModal textarea {
   width: 100%;
@@ -337,6 +465,9 @@
 }
 
 .settingsToolbar input:focus,
+.clientAccessForm input:focus,
+.clientAccessLinkBox input:focus,
+.clientAccessLinkBox textarea:focus,
 .shortcutModal input:focus,
 .shortcutModal textarea:focus {
   border-color: #007a4d;
@@ -345,6 +476,12 @@
 }
 
 .settingsToolbar input {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.clientAccessForm input,
+.clientAccessLinkBox input {
   min-height: 40px;
   padding: 0 12px;
 }
@@ -1372,6 +1509,15 @@
     display: grid;
     grid-template-columns: 1fr;
     justify-content: stretch;
+  }
+
+  .clientAccessForm,
+  .clientAccessActions {
+    grid-template-columns: 1fr;
+  }
+
+  .clientAccessActions {
+    display: grid;
   }
 
   .settingsHeader,

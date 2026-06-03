@@ -3,6 +3,7 @@ import type {
   Attachment,
   AuthResponse,
   BroadcastNoticeResult,
+  ClientAccessLink,
   Conversation,
   ConversationDetails,
   ConversationStatus,
@@ -60,6 +61,13 @@ export function sendBroadcastNotice(
 
 export function getConversation(token: string, id: number) {
   return apiFetch<ConversationDetails>(`/conversations/${id}`, { token });
+}
+
+export function getClientAccessLink(token: string, clienteId: string) {
+  return apiFetch<ClientAccessLink>(
+    `/conversations/client-access/${encodeURIComponent(clienteId)}`,
+    { token },
+  );
 }
 
 export function updateConversation(

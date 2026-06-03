@@ -123,6 +123,13 @@ export interface Cliente {
   cidade?: string;
 }
 
+export interface ClientAccessLink {
+  cliente: Cliente;
+  referencia?: string;
+  codigo: string;
+  url: string;
+}
+
 export interface Conversation {
   id: number;
   cliente_id_externo: string;

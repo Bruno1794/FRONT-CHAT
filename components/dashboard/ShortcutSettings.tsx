@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   createShortcut,
   deleteShortcut,
+  getClientAccessLink,
   getShortcuts,
   updateShortcut,
 } from "@/services/chatApi";
-import type { Shortcut, User } from "@/types";
+import type { ClientAccessLink, Shortcut, User } from "@/types";
 import styles from "@/app/dashboard/dashboard.module.css";
 
 type Props = {
@@ -45,6 +46,11 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [clienteId, setClienteId] = useState("");
+  const [clientAccess, setClientAccess] = useState<ClientAccessLink | null>(null);
+  const [isGeneratingAccess, setIsGeneratingAccess] = useState(false);
+  const [accessError, setAccessError] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState("");
 
   const loadShortcuts = useCallback(async () => {
     if (!token) {
@@ -164,6 +170,51 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     }
   };
 
+  const copyToClipboard = async (text: string, label: string) => {
+    setCopyFeedback("");
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyFeedback(`${label} copiado.`);
+    } catch {
+      setCopyFeedback("Nao foi possivel copiar automaticamente. Selecione e copie manualmente.");
+    }
+  };
+
+  const handleGenerateClientAccess = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!token || isGeneratingAccess) {
+      return;
+    }
+
+    const trimmedClienteId = clienteId.trim();
+
+    if (!trimmedClienteId) {
+      setAccessError("Informe o ID do cliente.");
+      setClientAccess(null);
+      return;
+    }
+
+    setIsGeneratingAccess(true);
+    setAccessError("");
+    setCopyFeedback("");
+
+    try {
+      const data = await getClientAccessLink(token, trimmedClienteId);
+      setClientAccess(data);
+    } catch (err) {
+      setClientAccess(null);
+      setAccessError(err instanceof Error ? err.message : "Falha ao gerar acesso do cliente.");
+    } finally {
+      setIsGeneratingAccess(false);
+    }
+  };
+
+  const clientAccessMessage = clientAccess
+    ? `Ola! Para falar com nosso atendimento, acesse: ${clientAccess.url}`
+    : "";
+
   return (
     <div className={styles.settingsView}>
       <header className={styles.settingsHeader}>
@@ -178,6 +229,82 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
       </header>
 
       {notificationContent}
+
+      <section className={styles.clientAccessSettings}>
+        <div className={styles.clientAccessHeader}>
+          <div>
+            <span>Acesso do cliente</span>
+            <h2>Gerar link do chat</h2>
+            <p>
+              Informe o ID do cliente na API externa para gerar o codigo e copiar o link
+              do atendimento.
+            </p>
+          </div>
+        </div>
+
+        <form className={styles.clientAccessForm} onSubmit={handleGenerateClientAccess}>
+          <label>
+            ID do cliente
+            <input
+              placeholder="Ex: 123"
+              value={clienteId}
+              onChange={(event) => setClienteId(event.target.value)}
+            />
+          </label>
+          <button disabled={isGeneratingAccess} type="submit">
+            {isGeneratingAccess ? "Gerando..." : "Gerar acesso"}
+          </button>
+        </form>
+
+        {accessError ? <p className={styles.clientAccessError}>{accessError}</p> : null}
+
+        {clientAccess ? (
+          <div className={styles.clientAccessResult}>
+            <div className={styles.clientAccessMeta}>
+              <span>{clientAccess.cliente.nome}</span>
+              <small>ID: {clientAccess.cliente.id}</small>
+              <small>Referencia: {clientAccess.referencia ?? "Nao informada"}</small>
+              <small>Codigo: {clientAccess.codigo}</small>
+            </div>
+
+            <div className={styles.clientAccessLinkBox}>
+              <label>
+                Link para enviar
+                <input readOnly value={clientAccess.url} />
+              </label>
+              <label>
+                Mensagem pronta
+                <textarea readOnly rows={3} value={clientAccessMessage} />
+              </label>
+            </div>
+
+            <div className={styles.clientAccessActions}>
+              <button
+                type="button"
+                onClick={() => void copyToClipboard(clientAccess.url, "Link")}
+              >
+                Copiar link
+              </button>
+              <button
+                type="button"
+                onClick={() => void copyToClipboard(clientAccess.codigo, "Codigo")}
+              >
+                Copiar codigo
+              </button>
+              <button
+                type="button"
+                onClick={() => void copyToClipboard(clientAccessMessage, "Mensagem")}
+              >
+                Copiar mensagem
+              </button>
+            </div>
+
+            {copyFeedback ? (
+              <p className={styles.clientAccessFeedback}>{copyFeedback}</p>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
 
       <div className={styles.settingsToolbar}>
         <input
