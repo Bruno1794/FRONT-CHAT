@@ -352,22 +352,18 @@ export function isIosImageFile(file: File) {
 
 export async function buildInlineImageAttachment(file: File) {
   const preparedFile = await prepareEmergencyImageForUpload(file);
+  const inlineFile =
+    preparedFile !== file &&
+    preparedFile.size <= IOS_INLINE_IMAGE_MAX_SIZE &&
+    preparedFile.type.startsWith("image/jpeg")
+      ? preparedFile
+      : file;
 
-  if (
-    preparedFile === file ||
-    preparedFile.size > IOS_INLINE_IMAGE_MAX_SIZE ||
-    !preparedFile.type.startsWith("image/jpeg")
-  ) {
-    throw new Error(
-      "Nao foi possivel preparar a foto do iPhone. Em Ajustes > Camera > Formatos, selecione Mais Compativel e tente novamente.",
-    );
-  }
-
-  const data = await readFileAsDataUrl(preparedFile);
+  const data = await readFileAsDataUrl(inlineFile);
 
   return {
-    filename: preparedFile.name,
-    mime_type: preparedFile.type || "image/jpeg",
+    filename: inlineFile.name,
+    mime_type: inlineFile.type || "image/heic",
     data,
   };
 }
