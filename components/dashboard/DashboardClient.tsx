@@ -562,6 +562,26 @@ export function DashboardClient() {
     [getMessagePreview],
   );
 
+  const patchConversationPreviewFromMessages = useCallback(
+    (conversationId: number, conversationMessages: Message[]) => {
+      const lastMessage = conversationMessages
+        .filter((message) => message.id > 0)
+        .toSorted(
+          (firstMessage, secondMessage) =>
+            new Date(firstMessage.created_at).getTime() -
+            new Date(secondMessage.created_at).getTime(),
+        )
+        .at(-1);
+
+      if (!lastMessage || lastMessage.conversation_id !== conversationId) {
+        return;
+      }
+
+      patchConversationPreviewFromMessage(lastMessage);
+    },
+    [patchConversationPreviewFromMessage],
+  );
+
   const applyConversationPreviewOverrides = useCallback(
     (items: Conversation[]) =>
       items.map((conversation) => {
@@ -1088,6 +1108,7 @@ export function DashboardClient() {
         }
 
         setMessages(data);
+        patchConversationPreviewFromMessages(conversationId, data);
         if (isActiveThreadVisible()) {
           return markConversationAsRead(token, conversationId, data);
         }
@@ -1097,7 +1118,13 @@ export function DashboardClient() {
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Falha ao carregar mensagens."),
       );
-  }, [isActiveThreadVisible, markConversationAsRead, selectedId, token]);
+  }, [
+    isActiveThreadVisible,
+    markConversationAsRead,
+    patchConversationPreviewFromMessages,
+    selectedId,
+    token,
+  ]);
 
   const updateMessageScrollState = useCallback(() => {
     const element = messagesRef.current;
@@ -1243,7 +1270,12 @@ export function DashboardClient() {
         .catch(() => undefined);
 
       if (selectedId !== null) {
-        getMessages(token, selectedId).then(setMessages).catch(() => undefined);
+        getMessages(token, selectedId)
+          .then((data) => {
+            setMessages(data);
+            patchConversationPreviewFromMessages(selectedId, data);
+          })
+          .catch(() => undefined);
       }
     };
 
@@ -1393,6 +1425,7 @@ export function DashboardClient() {
     markConversationAsRead,
     matchesConversationSearch,
     patchConversationPreviewFromMessage,
+    patchConversationPreviewFromMessages,
     playNotificationSound,
     selectedId,
     socket,
