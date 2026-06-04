@@ -375,6 +375,17 @@ function isImageUpload(file: File) {
   return file.type.startsWith("image/") || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
 }
 
+function isIosDevice() {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  return (
+    /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 function postUploadFile(uploadUrl: string, file: File, token?: string) {
   const formData = new FormData();
   formData.append("file", file, file.name);
@@ -473,6 +484,27 @@ async function uploadPreparedFile(file: File, token?: string) {
 }
 
 export async function uploadFile(file: File, token?: string) {
+  if (isIosDevice() && isImageUpload(file)) {
+    let response: Response;
+
+    try {
+      response = await uploadBase64Image(file, token);
+    } catch {
+      const emergencyFile = await prepareEmergencyImageForUpload(file);
+      response = await uploadBase64Image(emergencyFile, token);
+    }
+
+    if (!response.ok) {
+      const detail = await readUploadError(response);
+
+      throw new Error(
+        detail ? `Falha ao enviar ${file.name}: ${detail}` : `Falha ao enviar ${file.name}.`,
+      );
+    }
+
+    return response.json() as Promise<UploadResponse>;
+  }
+
   const preparedFile = await prepareFileForUpload(file);
   let response: Response;
 
