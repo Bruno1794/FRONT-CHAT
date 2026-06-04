@@ -334,45 +334,14 @@ export function sendMessage(payload: {
   token?: string;
 }) {
   const { token, message_type = "TEXT", ...body } = payload;
-  const hasInlineAttachments =
-    Array.isArray(body.inline_attachments) && body.inline_attachments.length > 0;
 
-  if (!hasInlineAttachments) {
-    return apiFetch<Message>("/messages", {
-      method: "POST",
-      token,
-      json: {
-        ...body,
-        message_type,
-      },
-    });
-  }
-
-  return fetch("/api/messages", {
+  return apiFetch<Message>("/messages", {
     method: "POST",
-    body: JSON.stringify({
+    token,
+    json: {
       ...body,
       message_type,
-    }),
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-  }).then(async (response) => {
-    if (!response.ok) {
-      let message = `API request failed with status ${response.status}`;
-
-      try {
-        const errorBody = (await response.json()) as { message?: string };
-        message = errorBody.message ?? message;
-      } catch {
-        // Keep the default status message when the API does not return JSON.
-      }
-
-      throw new Error(message);
-    }
-
-    return response.json() as Promise<Message>;
   });
 }
 
