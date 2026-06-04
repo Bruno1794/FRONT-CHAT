@@ -143,6 +143,10 @@ export interface Conversation {
   status: ConversationStatus;
   ultima_mensagem: string | null;
   ultima_interacao: string;
+  ultima_mensagem_id?: number | null;
+  ultima_mensagem_sender_type?: SenderType | null;
+  ultima_mensagem_read?: boolean | null;
+  ultima_mensagem_read_at?: string | null;
   cliente?: Cliente | null;
   unread_count: number;
 }

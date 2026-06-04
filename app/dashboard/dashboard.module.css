@@ -998,6 +998,52 @@
   -webkit-line-clamp: 1;
 }
 
+.conversation .conversationPreview {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  -webkit-line-clamp: unset;
+}
+
+.conversationPreview > span:last-child {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversationReceipt {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 12px;
+  color: #8b9490;
+}
+
+.conversationReceipt span {
+  position: absolute;
+  top: 2px;
+  width: 7px;
+  height: 4px;
+  border-right: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.conversationReceipt span:first-child {
+  left: 2px;
+}
+
+.conversationReceipt span:last-child {
+  left: 7px;
+}
+
+.conversationReceiptRead {
+  color: #1d9bf0;
+}
+
 .badge {
   display: grid;
   min-width: 20px;

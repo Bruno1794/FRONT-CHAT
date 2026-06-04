@@ -427,7 +427,17 @@ export function DashboardClient() {
   const latestMessagesRef = useRef<Message[]>(messages);
   const unreadCountsRef = useRef<Record<number, number>>({});
   const conversationPreviewOverridesRef = useRef<
-    Record<number, { ultima_interacao: string; ultima_mensagem: string }>
+    Record<
+      number,
+      {
+        ultima_interacao: string;
+        ultima_mensagem: string;
+        ultima_mensagem_id: number;
+        ultima_mensagem_sender_type: Message["sender_type"];
+        ultima_mensagem_read: boolean;
+        ultima_mensagem_read_at: string | null;
+      }
+    >
   >({});
   const selectedIdRef = useRef<number | null>(null);
   const messagesRequestRef = useRef(0);
@@ -516,6 +526,10 @@ export function DashboardClient() {
       conversationPreviewOverridesRef.current[message.conversation_id] = {
         ultima_interacao: message.created_at,
         ultima_mensagem: getMessagePreview(message),
+        ultima_mensagem_id: message.id,
+        ultima_mensagem_sender_type: message.sender_type,
+        ultima_mensagem_read: Boolean(message.read || message.read_at),
+        ultima_mensagem_read_at: message.read_at ?? null,
       };
 
       setConversations((current) =>
@@ -537,6 +551,10 @@ export function DashboardClient() {
             ...conversation,
             ultima_mensagem: getMessagePreview(message),
             ultima_interacao: message.created_at,
+            ultima_mensagem_id: message.id,
+            ultima_mensagem_sender_type: message.sender_type,
+            ultima_mensagem_read: Boolean(message.read || message.read_at),
+            ultima_mensagem_read_at: message.read_at ?? null,
           };
         }),
       );
@@ -618,6 +636,23 @@ export function DashboardClient() {
     [search],
   );
 
+  const getConversationReadStatus = (conversation: Conversation) => {
+    const hasLastMessage =
+      Boolean(conversation.ultima_mensagem_id) ||
+      Boolean(conversation.ultima_mensagem_sender_type);
+
+    if (!hasLastMessage) {
+      return null;
+    }
+
+    return {
+      isRead: Boolean(
+        conversation.ultima_mensagem_read ||
+          conversation.ultima_mensagem_read_at,
+      ),
+    };
+  };
+
   const loadConversations = useCallback(
     async (accessToken: string, nextSelectedId?: number | null) => {
       const data = await getConversations(accessToken);
@@ -662,11 +697,22 @@ export function DashboardClient() {
       }
 
       const readAt = new Date().toISOString();
+      const unreadMessageIds = new Set(unreadMessages.map((message) => message.id));
 
       setConversations((current) =>
         current.map((conversation) =>
           conversation.id === conversationId
-            ? { ...conversation, unread_count: 0 }
+            ? {
+                ...conversation,
+                unread_count: 0,
+                ...(conversation.ultima_mensagem_id &&
+                unreadMessageIds.has(conversation.ultima_mensagem_id)
+                  ? {
+                      ultima_mensagem_read: true,
+                      ultima_mensagem_read_at: readAt,
+                    }
+                  : {}),
+              }
             : conversation,
         ),
       );
@@ -1231,12 +1277,43 @@ export function DashboardClient() {
         return;
       }
 
+      Object.entries(conversationPreviewOverridesRef.current).forEach(
+        ([conversationId, preview]) => {
+          if (preview.ultima_mensagem_id === messageId) {
+            conversationPreviewOverridesRef.current[Number(conversationId)] = {
+              ...preview,
+              ultima_mensagem_read: true,
+              ultima_mensagem_read_at: readAt ?? new Date().toISOString(),
+            };
+          }
+        },
+      );
+
       setMessages((current) =>
         current.map((message) =>
           message.id === messageId
             ? { ...message, read: true, read_at: readAt ?? new Date().toISOString() }
             : message,
         ),
+      );
+      setConversations((current) =>
+        current.map((conversation) => {
+          const isConversationLastMessage =
+            conversation.ultima_mensagem_id === messageId ||
+            (!conversation.ultima_mensagem_id &&
+              typeof receipt !== "number" &&
+              receipt.conversation_id === conversation.id);
+
+          if (!isConversationLastMessage) {
+            return conversation;
+          }
+
+          return {
+            ...conversation,
+            ultima_mensagem_read: true,
+            ultima_mensagem_read_at: readAt ?? new Date().toISOString(),
+          };
+        }),
       );
     };
 
@@ -1412,6 +1489,7 @@ export function DashboardClient() {
         token,
       });
       setMessages((current) => [...current, message]);
+      patchConversationPreviewFromMessage(message);
       setPendingFiles([]);
       await loadConversations(token, selectedConversation.id);
     } catch (err) {
@@ -1756,28 +1834,46 @@ export function DashboardClient() {
             {!isLoading && conversations.length === 0 ? (
               <p className={styles.state}>Nenhuma conversa encontrada.</p>
             ) : null}
-            {conversations.map((conversation) => (
-              <button
-                className={`${styles.conversation} ${
-                  conversation.id === selectedId ? styles.activeConversation : ""
-                }`}
-                key={conversation.id}
-                type="button"
-                onClick={() => handleSelectConversation(conversation)}
-              >
-                <span className={styles.avatar}>{getInitials(getClienteLabel(conversation))}</span>
-                <div>
-                  <span className={styles.conversationTopline}>
-                    <strong>{getClienteLabel(conversation)}</strong>
-                    <span>{conversation.ultima_interacao ? formatTime(conversation.ultima_interacao) : ""}</span>
-                  </span>
-                  <small>{conversation.ultima_mensagem ?? "Sem mensagem recente"}</small>
-                </div>
-                {conversation.unread_count ? (
-                  <span className={styles.badge}>{conversation.unread_count}</span>
-                ) : null}
-              </button>
-            ))}
+            {conversations.map((conversation) => {
+              const readStatus = getConversationReadStatus(conversation);
+
+              return (
+                <button
+                  className={`${styles.conversation} ${
+                    conversation.id === selectedId ? styles.activeConversation : ""
+                  }`}
+                  key={conversation.id}
+                  type="button"
+                  onClick={() => handleSelectConversation(conversation)}
+                >
+                  <span className={styles.avatar}>{getInitials(getClienteLabel(conversation))}</span>
+                  <div>
+                    <span className={styles.conversationTopline}>
+                      <strong>{getClienteLabel(conversation)}</strong>
+                      <span>{conversation.ultima_interacao ? formatTime(conversation.ultima_interacao) : ""}</span>
+                    </span>
+                    <small className={styles.conversationPreview}>
+                      {readStatus ? (
+                        <span
+                          aria-label={readStatus.isRead ? "Ultima mensagem visualizada" : "Ultima mensagem entregue"}
+                          className={`${styles.conversationReceipt} ${
+                            readStatus.isRead ? styles.conversationReceiptRead : ""
+                          }`}
+                          title={readStatus.isRead ? "Visualizada" : "Entregue"}
+                        >
+                          <span />
+                          <span />
+                        </span>
+                      ) : null}
+                      <span>{conversation.ultima_mensagem ?? "Sem mensagem recente"}</span>
+                    </small>
+                  </div>
+                  {conversation.unread_count ? (
+                    <span className={styles.badge}>{conversation.unread_count}</span>
+                  ) : null}
+                </button>
+              );
+            })}
           </aside>
 
           <section className={styles.thread}>
