@@ -638,6 +638,7 @@ export function DashboardClient() {
 
   const getConversationReadStatus = (conversation: Conversation) => {
     const hasLastMessage =
+      Boolean(conversation.ultima_mensagem) ||
       Boolean(conversation.ultima_mensagem_id) ||
       Boolean(conversation.ultima_mensagem_sender_type);
 

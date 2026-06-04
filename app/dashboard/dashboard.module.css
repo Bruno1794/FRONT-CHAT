@@ -947,6 +947,11 @@
   transform: translateX(2px);
 }
 
+.conversation > div {
+  overflow: hidden;
+  min-width: 0;
+}
+
 .avatar,
 .profileAvatar {
   display: grid;
@@ -1000,7 +1005,9 @@
 
 .conversation .conversationPreview {
   display: flex;
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 5px;
   -webkit-line-clamp: unset;
