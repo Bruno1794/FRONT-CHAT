@@ -582,6 +582,25 @@ export function DashboardClient() {
     [patchConversationPreviewFromMessage],
   );
 
+  const hydrateConversationPreviewReceipts = useCallback(
+    async (accessToken: string, items: Conversation[]) => {
+      const conversationsWithPreview = items.filter(
+        (conversation) => conversation.ultima_mensagem,
+      );
+
+      await Promise.allSettled(
+        conversationsWithPreview.map(async (conversation) => {
+          const conversationMessages = await getMessages(accessToken, conversation.id);
+          patchConversationPreviewFromMessages(
+            conversation.id,
+            conversationMessages,
+          );
+        }),
+      );
+    },
+    [patchConversationPreviewFromMessages],
+  );
+
   const applyConversationPreviewOverrides = useCallback(
     (items: Conversation[]) =>
       items.map((conversation) => {
@@ -687,6 +706,7 @@ export function DashboardClient() {
         ]),
       );
       setConversations(filteredData);
+      void hydrateConversationPreviewReceipts(accessToken, filteredData);
 
       if (nextSelectedId !== undefined) {
         setSelectedId(nextSelectedId);
@@ -695,7 +715,11 @@ export function DashboardClient() {
 
       setSelectedId((current) => current ?? filteredData[0]?.id ?? null);
     },
-    [applyConversationPreviewOverrides, matchesConversationSearch],
+    [
+      applyConversationPreviewOverrides,
+      hydrateConversationPreviewReceipts,
+      matchesConversationSearch,
+    ],
   );
 
   useEffect(() => {
