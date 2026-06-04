@@ -853,6 +853,7 @@ export function ChatWidgetClient() {
     joinConversation();
     refreshConversationMessages();
     const presenceIntervalId = window.setInterval(pingPresence, 5000);
+    const syncIntervalId = window.setInterval(refreshConversationMessages, 6000);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", refreshConversationMessages);
     window.addEventListener("pageshow", refreshConversationMessages);
@@ -870,6 +871,7 @@ export function ChatWidgetClient() {
 
     return () => {
       window.clearInterval(presenceIntervalId);
+      window.clearInterval(syncIntervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", refreshConversationMessages);
       window.removeEventListener("pageshow", refreshConversationMessages);

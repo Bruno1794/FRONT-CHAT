@@ -1272,6 +1272,7 @@ export function DashboardClient() {
     };
 
     syncSelectedConversationPresence();
+    const syncIntervalId = window.setInterval(reload, 6000);
     const presenceIntervalId = window.setInterval(
       pingSelectedConversationPresence,
       20000,
@@ -1289,6 +1290,7 @@ export function DashboardClient() {
     socket.on("conversation_presence", handleConversationPresence);
 
     return () => {
+      window.clearInterval(syncIntervalId);
       window.clearInterval(presenceIntervalId);
       document.removeEventListener(
         "visibilitychange",
