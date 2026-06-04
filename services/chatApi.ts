@@ -22,6 +22,7 @@ import {
 import { getApiUrl } from "./api";
 
 const DIRECT_UPLOAD_SIZE = 3.5 * 1024 * 1024;
+const IOS_INLINE_IMAGE_MAX_SIZE = 220 * 1024;
 
 export function login(email: string, senha: string) {
   return apiFetch<AuthResponse>("/auth/login", {
@@ -351,6 +352,17 @@ export function isIosImageFile(file: File) {
 
 export async function buildInlineImageAttachment(file: File) {
   const preparedFile = await prepareEmergencyImageForUpload(file);
+
+  if (
+    preparedFile === file ||
+    preparedFile.size > IOS_INLINE_IMAGE_MAX_SIZE ||
+    !preparedFile.type.startsWith("image/jpeg")
+  ) {
+    throw new Error(
+      "Nao foi possivel preparar a foto do iPhone. Em Ajustes > Camera > Formatos, selecione Mais Compativel e tente novamente.",
+    );
+  }
+
   const data = await readFileAsDataUrl(preparedFile);
 
   return {
