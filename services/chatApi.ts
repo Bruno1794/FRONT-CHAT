@@ -479,7 +479,17 @@ export async function uploadFile(file: File, token?: string) {
   try {
     response = await uploadPreparedFile(preparedFile, token);
   } catch {
-    throw new Error(`Falha ao enviar ${file.name}: conexao com upload falhou.`);
+    if (!isImageUpload(file)) {
+      throw new Error(`Falha ao enviar ${file.name}: conexao com upload falhou.`);
+    }
+
+    const emergencyFile = await prepareEmergencyImageForUpload(file);
+
+    try {
+      response = await uploadBase64Image(emergencyFile, token);
+    } catch {
+      throw new Error(`Falha ao enviar ${file.name}: conexao com upload falhou.`);
+    }
   }
 
   if (!response.ok && [413, 502, 504].includes(response.status)) {
