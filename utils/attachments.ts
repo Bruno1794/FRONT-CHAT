@@ -21,6 +21,10 @@ export function getAttachmentUrl(attachment: Attachment) {
     return toLocalFileUrl(filename);
   }
 
+  if (rawUrl.startsWith("blob:") || rawUrl.startsWith("data:")) {
+    return rawUrl;
+  }
+
   if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
     const fileFromUrl = rawUrl.split("/").pop();
     return rawUrl.includes("/files/")
@@ -58,6 +62,10 @@ export function getAttachmentFileUrl(attachment: Attachment) {
     attachment.filename ||
     attachment.url?.split(/[\\/]/).pop() ||
     attachment.path?.split(/[\\/]/).pop();
+
+  if (attachment.url?.startsWith("blob:") || attachment.url?.startsWith("data:")) {
+    return attachment.url;
+  }
 
   return toLocalFileUrl(filename);
 }

@@ -1105,6 +1105,33 @@ export function ChatWidgetClient() {
     setError("");
     setIsSending(true);
 
+    const optimisticUrls = files.map((file) => URL.createObjectURL(file));
+    const optimisticId = -Date.now();
+    const shouldCreateOptimisticMessage = text.trim().length > 0 || files.length > 0;
+
+    if (shouldCreateOptimisticMessage) {
+      const optimisticAttachments: Attachment[] = files.map((file, index) => ({
+        filename: file.name || `arquivo-${index + 1}`,
+        original_name: file.name || `arquivo-${index + 1}`,
+        url: optimisticUrls[index],
+        mime_type: file.type || "application/octet-stream",
+        size: file.size,
+      }));
+      const optimisticMessage: Message = {
+        id: optimisticId,
+        conversation_id: conversation.id,
+        sender_type: "CLIENTE",
+        sender_id: conversation.cliente_id_externo,
+        message: text || null,
+        message_type: getMessageType(optimisticAttachments, text),
+        created_at: new Date().toISOString(),
+        attachments: optimisticAttachments,
+      };
+
+      setMessages((current) => [...current, optimisticMessage]);
+      window.setTimeout(() => scrollMessagesToEnd("smooth"), 50);
+    }
+
     try {
       const iosImageFiles = files.filter(isIosImageFile);
       const uploadFiles = files.filter((file) => !isIosImageFile(file));
@@ -1131,13 +1158,25 @@ export function ChatWidgetClient() {
         message_type: getMessageType(attachments, text),
         attachments,
       });
-      setMessages((current) =>
-        current.some((item) => item.id === message.id) ? current : [...current, message],
-      );
+      setMessages((current) => {
+        if (!shouldCreateOptimisticMessage) {
+          return current.some((item) => item.id === message.id) ? current : [...current, message];
+        }
+
+        const withoutDuplicates = current.filter(
+          (item) => item.id !== optimisticId && item.id !== message.id,
+        );
+
+        return [...withoutDuplicates, message];
+      });
       setPendingFiles([]);
     } catch (err) {
+      if (shouldCreateOptimisticMessage) {
+        setMessages((current) => current.filter((item) => item.id !== optimisticId));
+      }
       setError(err instanceof Error ? err.message : "Falha ao enviar mensagem.");
     } finally {
+      optimisticUrls.forEach((url) => URL.revokeObjectURL(url));
       setIsSending(false);
     }
   };
