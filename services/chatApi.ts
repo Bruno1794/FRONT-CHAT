@@ -419,6 +419,41 @@ async function readUploadError(response: Response) {
   }
 }
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Falha ao ler imagem."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function postBase64Image(uploadUrl: string, file: File, token?: string) {
+  const dataUrl = await readFileAsDataUrl(file);
+
+  return fetch(uploadUrl, {
+    method: "POST",
+    body: JSON.stringify({
+      filename: file.name,
+      mime_type: file.type || "image/jpeg",
+      data: dataUrl,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+}
+
+async function uploadBase64Image(file: File, token?: string) {
+  try {
+    return await postBase64Image("/api/upload/base64", file, token);
+  } catch {
+    return postBase64Image(`${getApiUrl()}/upload/base64`, file, token);
+  }
+}
+
 async function uploadPreparedFile(file: File, token?: string) {
   const shouldUploadDirectly = isImageUpload(file) || file.size >= DIRECT_UPLOAD_SIZE;
 
@@ -460,7 +495,7 @@ export async function uploadFile(file: File, token?: string) {
 
     if (emergencyFile !== file) {
       try {
-        response = await uploadPreparedFile(emergencyFile, token);
+        response = await uploadBase64Image(emergencyFile, token);
       } catch {
         // Keep the original response so the API error can be shown below.
       }
