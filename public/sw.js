@@ -1,4 +1,4 @@
-const CACHE_NAME = "suportesync-pwa-v2";
+const CACHE_NAME = "suportesync-pwa-v3";
 const STATIC_ASSETS = ["/", "/chat", "/dashboard", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -32,6 +32,22 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) {
+    return;
+  }
+
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+          }
+
+          return response;
+        })
+        .catch(() => caches.match(request).then((cachedResponse) => cachedResponse || caches.match("/"))),
+    );
     return;
   }
 

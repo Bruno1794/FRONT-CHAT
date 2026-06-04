@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const ACCESS_TOKEN_KEY = "suportesync.accessToken";
 const CLIENT_CHAT_SESSION_KEY = "suportesync.clientChat";
+const SW_REFRESH_KEY = "suportesync.swRefreshedAt";
 
 type NavigatorWithStandalone = Navigator & {
   standalone?: boolean;
@@ -95,18 +96,39 @@ export function PwaRegistration() {
       return;
     }
 
-    const register = () => {
-      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    const handleControllerChange = () => {
+      const lastRefresh = Number(sessionStorage.getItem(SW_REFRESH_KEY) || 0);
+      const now = Date.now();
+
+      if (now - lastRefresh < 5000) {
+        return;
+      }
+
+      sessionStorage.setItem(SW_REFRESH_KEY, String(now));
+      window.location.reload();
     };
+
+    const register = () => {
+      void navigator.serviceWorker
+        .register("/sw.js")
+        .then((registration) => registration.update().catch(() => undefined))
+        .catch(() => undefined);
+    };
+
+    navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
 
     if (document.readyState === "complete") {
       register();
-      return;
+      return () =>
+        navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
     }
 
     window.addEventListener("load", register, { once: true });
 
-    return () => window.removeEventListener("load", register);
+    return () => {
+      window.removeEventListener("load", register);
+      navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
+    };
   }, []);
 
   return null;
