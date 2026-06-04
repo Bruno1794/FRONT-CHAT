@@ -23,6 +23,7 @@ import { getApiUrl } from "./api";
 
 const DIRECT_UPLOAD_SIZE = 3.5 * 1024 * 1024;
 const IOS_INLINE_IMAGE_MAX_SIZE = 220 * 1024;
+const IOS_CHUNK_SIZE = 96 * 1024;
 
 export function login(email: string, senha: string) {
   return apiFetch<AuthResponse>("/auth/login", {
@@ -366,6 +367,53 @@ export async function buildInlineImageAttachment(file: File) {
     mime_type: inlineFile.type || "image/heic",
     data,
   };
+}
+
+export async function uploadIosImageInChunks(file: File) {
+  const preparedFile = await prepareEmergencyImageForUpload(file);
+  const uploadFile = preparedFile !== file ? preparedFile : file;
+  const dataUrl = await readFileAsDataUrl(uploadFile);
+  const base64 = dataUrl.includes(",") ? dataUrl.split(",").pop() || "" : dataUrl;
+  const total = Math.ceil(base64.length / IOS_CHUNK_SIZE);
+  const uploadId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  let uploaded: UploadResponse | null = null;
+
+  for (let index = 0; index < total; index += 1) {
+    const response = await fetch(`${getApiUrl()}/upload/base64-chunk`, {
+      method: "POST",
+      body: JSON.stringify({
+        upload_id: uploadId,
+        filename: uploadFile.name,
+        mime_type: uploadFile.type || "image/heic",
+        chunk: base64.slice(index * IOS_CHUNK_SIZE, (index + 1) * IOS_CHUNK_SIZE),
+        index,
+        total,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const detail = await readUploadError(response);
+      throw new Error(detail || `Falha ao enviar ${file.name}.`);
+    }
+
+    const result = (await response.json()) as {
+      complete: boolean;
+      file?: UploadResponse;
+    };
+
+    if (result.complete && result.file) {
+      uploaded = result.file;
+    }
+  }
+
+  if (!uploaded) {
+    throw new Error(`Falha ao enviar ${file.name}.`);
+  }
+
+  return uploaded;
 }
 
 export function updateMessage(payload: {
