@@ -326,6 +326,11 @@ export function sendMessage(payload: {
   message: string;
   message_type?: MessageType;
   attachments?: Attachment[];
+  inline_attachments?: Array<{
+    filename: string;
+    mime_type: string;
+    data: string;
+  }>;
   token?: string;
 }) {
   const { token, message_type = "TEXT", ...body } = payload;
@@ -338,6 +343,21 @@ export function sendMessage(payload: {
       message_type,
     },
   });
+}
+
+export function isIosImageFile(file: File) {
+  return isIosDevice() && isImageUpload(file);
+}
+
+export async function buildInlineImageAttachment(file: File) {
+  const preparedFile = await prepareEmergencyImageForUpload(file);
+  const data = await readFileAsDataUrl(preparedFile);
+
+  return {
+    filename: preparedFile.name,
+    mime_type: preparedFile.type || "image/jpeg",
+    data,
+  };
 }
 
 export function updateMessage(payload: {

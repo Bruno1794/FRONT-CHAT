@@ -9,6 +9,7 @@ import { useSocket } from "@/hooks/useSocket";
 import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 import {
   createConversation,
+  buildInlineImageAttachment,
   deleteMessage,
   deleteMessageReaction,
   getClientMessages,
@@ -16,6 +17,7 @@ import {
   markMessageAsRead,
   reactToMessage,
   sendMessage,
+  isIosImageFile,
   subscribeToPushAlert,
   subscribeToPush,
   updateMessage,
@@ -1104,7 +1106,12 @@ export function ChatWidgetClient() {
     setIsSending(true);
 
     try {
-      const uploadedFiles = await Promise.all(files.map((file) => uploadFile(file)));
+      const inlineImageFiles = files.filter(isIosImageFile);
+      const uploadFiles = files.filter((file) => !isIosImageFile(file));
+      const inlineAttachments = await Promise.all(
+        inlineImageFiles.map((file) => buildInlineImageAttachment(file)),
+      );
+      const uploadedFiles = await Promise.all(uploadFiles.map((file) => uploadFile(file)));
       const attachments: Attachment[] = uploadedFiles.map((file) => ({
         filename: file.filename,
         original_name: file.original_name,
@@ -1113,13 +1120,22 @@ export function ChatWidgetClient() {
         mime_type: file.mime_type,
         size: file.size,
       }));
+      const messageTypeAttachments: Attachment[] = [
+        ...attachments,
+        ...inlineAttachments.map((attachment) => ({
+          filename: attachment.filename,
+          mime_type: attachment.mime_type,
+          size: attachment.data.length,
+        })),
+      ];
       const message = await sendMessage({
         conversation_id: conversation.id,
         sender_type: "CLIENTE",
         sender_id: conversation.cliente_id_externo,
         message: text,
-        message_type: getMessageType(attachments, text),
+        message_type: getMessageType(messageTypeAttachments, text),
         attachments,
+        inline_attachments: inlineAttachments,
       });
       setMessages((current) =>
         current.some((item) => item.id === message.id) ? current : [...current, message],
