@@ -266,6 +266,7 @@ export function MessageBubble({
                 {richMessage.actions.map((action) => (
                   <button
                     key={action.id}
+                    data-action={action.type}
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();

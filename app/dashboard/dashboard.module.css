@@ -801,6 +801,111 @@
   font-size: 0.78rem;
 }
 
+.cardPreview {
+  display: grid;
+  overflow: hidden;
+  width: min(340px, 100%);
+  border: 1px solid #d7e9e2;
+  border-radius: 12px;
+  background: #ffffff;
+  justify-self: end;
+}
+
+.cardPreviewHeader {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 11px 12px 0;
+}
+
+.cardPreviewHeader span {
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #dff5eb;
+  color: #007a4d;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.cardPreviewHeader strong {
+  overflow: hidden;
+  min-width: 0;
+  color: #111827;
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardPreview p {
+  margin: 7px 12px 0;
+  color: #43514c;
+  font-size: 0.84rem;
+  line-height: 1.38;
+}
+
+.cardPreview code {
+  overflow: hidden;
+  margin: 10px 12px 12px;
+  border: 1px dashed #c7ded5;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f4faf7;
+  color: #1d3b32;
+  font-family: inherit;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardPreviewActions {
+  display: grid;
+  border-top: 1px solid #dce9e4;
+  background: #fbfdfc;
+}
+
+.cardPreviewActions button {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-top: 1px solid #dce9e4;
+  background: transparent;
+  color: #007a4d;
+  cursor: default;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.cardPreviewActions button:first-child {
+  border-top: 0;
+}
+
+.cardPreviewActions button::before {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: #e6f7ef;
+  color: currentColor;
+  font-size: 0.72rem;
+}
+
+.cardPreviewActions button[data-action="copy"]::before {
+  content: "C";
+}
+
+.cardPreviewActions button[data-action="link"]::before {
+  content: ">";
+}
+
+.cardPreviewActions button[data-action="reply"]::before {
+  content: "R";
+}
+
 .formChecks {
   display: flex;
   flex-wrap: wrap;
@@ -1740,6 +1845,11 @@
 
   .shortcutButtonConfig {
     grid-template-columns: 1fr;
+  }
+
+  .cardPreview {
+    width: 100%;
+    justify-self: stretch;
   }
 
   .settingsToolbar {

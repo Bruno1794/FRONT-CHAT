@@ -812,6 +812,35 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
                     </div>
                   );
                 })}
+
+                <div className={styles.cardPreview}>
+                  <div className={styles.cardPreviewHeader}>
+                    <span>
+                      {form.button1Type === "copy" || form.cardValue ? "PIX" : "INFO"}
+                    </span>
+                    <strong>{form.title || "Titulo do card"}</strong>
+                  </div>
+                  <p>{form.message || "Mensagem que aparece para o cliente."}</p>
+                  {form.cardValue ? <code>{form.cardValue}</code> : null}
+                  <div className={styles.cardPreviewActions}>
+                    {[
+                      {
+                        label: form.button1Label,
+                        type: form.button1Type,
+                      },
+                      {
+                        label: form.button2Label,
+                        type: form.button2Type,
+                      },
+                    ]
+                      .filter((action) => action.label.trim())
+                      .map((action, index) => (
+                        <button data-action={action.type} key={`${action.label}-${index}`} type="button">
+                          {action.label}
+                        </button>
+                      ))}
+                  </div>
+                </div>
               </div>
             ) : null}
 
