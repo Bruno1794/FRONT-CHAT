@@ -48,6 +48,7 @@ import {
   formatTime,
   getDateKey,
 } from "@/utils/formatters";
+import { getRichMessagePreview } from "@/utils/richMessages";
 import styles from "@/app/dashboard/dashboard.module.css";
 
 type WindowWithAudioContext = Window & {
@@ -501,7 +502,7 @@ export function DashboardClient() {
     }
 
     if (message.message?.trim()) {
-      return message.message;
+      return getRichMessagePreview(message.message);
     }
 
     const firstAttachment = message.attachments?.[0];

@@ -711,6 +711,46 @@
   padding: 10px 12px;
 }
 
+.shortcutTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.shortcutTypeGrid button {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #d7e2de;
+  border-radius: 12px;
+  padding: 12px;
+  background: #ffffff;
+  color: #20312c;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.shortcutTypeGrid button:hover,
+.activeShortcutType {
+  border-color: #007a4d !important;
+  box-shadow: 0 10px 24px rgba(0, 122, 77, 0.12);
+  transform: translateY(-1px);
+}
+
+.shortcutTypeGrid strong {
+  color: #111827;
+  font-size: 0.86rem;
+}
+
+.shortcutTypeGrid small {
+  color: #68756f;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
 .formChecks {
   display: flex;
   flex-wrap: wrap;
@@ -1642,6 +1682,10 @@
   .settingsHeader,
   .shortcutActions {
     flex-direction: column;
+  }
+
+  .shortcutTypeGrid {
+    grid-template-columns: 1fr;
   }
 
   .settingsToolbar {

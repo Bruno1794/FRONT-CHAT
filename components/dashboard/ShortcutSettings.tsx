@@ -12,6 +12,11 @@ import {
   updateShortcut,
 } from "@/services/chatApi";
 import type { ClientAccessLink, Shortcut, User } from "@/types";
+import {
+  buildPixCardMessage,
+  getRichMessagePreview,
+  parseRichMessage,
+} from "@/utils/richMessages";
 import styles from "@/app/dashboard/dashboard.module.css";
 
 type Props = {
@@ -24,6 +29,8 @@ type FormState = {
   shortcut: string;
   title: string;
   message: string;
+  kind: "text" | "pix";
+  pixKey: string;
   active: boolean;
   global: boolean;
 };
@@ -38,6 +45,8 @@ const emptyForm: FormState = {
   shortcut: "",
   title: "",
   message: "",
+  kind: "text",
+  pixKey: "",
   active: true,
   global: false,
 };
@@ -107,11 +116,15 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
   };
 
   const openEditModal = (shortcut: Shortcut) => {
+    const richMessage = parseRichMessage(shortcut.message);
+
     setEditingShortcut(shortcut);
     setForm({
       shortcut: shortcut.shortcut,
       title: shortcut.title,
-      message: shortcut.message,
+      message: richMessage?.type === "pix" ? richMessage.body : shortcut.message,
+      kind: richMessage?.type === "pix" ? "pix" : "text",
+      pixKey: richMessage?.type === "pix" ? richMessage.copyValue : "",
       active: shortcut.active,
       global: shortcut.user_id === null,
     });
@@ -139,11 +152,24 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     setError("");
 
     try {
+      if (form.kind === "pix" && !form.pixKey.trim()) {
+        setError("Informe a chave Pix para criar o botao de copiar.");
+        return;
+      }
+
       const payload = {
-        ...form,
         shortcut: form.shortcut.replace(/^\//, "").trim(),
         title: form.title.trim(),
-        message: form.message.trim(),
+        message:
+          form.kind === "pix"
+            ? buildPixCardMessage({
+                type: "pix",
+                title: form.title.trim() || "Pix",
+                body: form.message.trim() || "Copie a chave Pix abaixo.",
+                copyValue: form.pixKey.trim(),
+                copyLabel: "Copiar Pix",
+              })
+            : form.message.trim(),
         global: user?.role === "ADMIN" ? form.global : false,
       };
 
@@ -523,7 +549,7 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
             <div>
               <span>/{shortcut.shortcut}</span>
               <strong>{shortcut.title}</strong>
-              <p>{shortcut.message}</p>
+              <p>{getRichMessagePreview(shortcut.message)}</p>
             </div>
             <div className={styles.shortcutMeta}>
               <small>{shortcut.user_id === null ? "Global" : "Meu atalho"}</small>
@@ -588,13 +614,54 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
               <textarea
                 required
                 rows={6}
-                placeholder="Ola, tudo bem? Como posso ajudar?"
+                placeholder={
+                  form.kind === "pix"
+                    ? "Ex: Segue nosso Pix para pagamento."
+                    : "Ola, tudo bem? Como posso ajudar?"
+                }
                 value={form.message}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, message: event.target.value }))
                 }
               />
             </label>
+
+            <div className={styles.shortcutTypeGrid}>
+              <button
+                className={form.kind === "text" ? styles.activeShortcutType : ""}
+                type="button"
+                onClick={() =>
+                  setForm((current) => ({ ...current, kind: "text" }))
+                }
+              >
+                <strong>Texto simples</strong>
+                <small>Envia somente a mensagem cadastrada.</small>
+              </button>
+              <button
+                className={form.kind === "pix" ? styles.activeShortcutType : ""}
+                type="button"
+                onClick={() =>
+                  setForm((current) => ({ ...current, kind: "pix" }))
+                }
+              >
+                <strong>Pix com copiar</strong>
+                <small>Mostra card com chave Pix e botao para copiar.</small>
+              </button>
+            </div>
+
+            {form.kind === "pix" ? (
+              <label>
+                Chave Pix
+                <input
+                  required
+                  placeholder="CPF, CNPJ, email, telefone ou chave aleatoria"
+                  value={form.pixKey}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, pixKey: event.target.value }))
+                  }
+                />
+              </label>
+            ) : null}
 
             <div className={styles.formChecks}>
               <label>

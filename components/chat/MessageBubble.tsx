@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Attachment, Message } from "@/types";
 import { getAttachmentFileUrl, getAttachmentUrl } from "@/utils/attachments";
 import { formatTime } from "@/utils/formatters";
+import { parseRichMessage } from "@/utils/richMessages";
 import { FilePreview } from "./FilePreview";
 import styles from "./MessageBubble.module.css";
 
@@ -25,6 +26,7 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
     url: string;
   } | null>(null);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const [copyFeedback, setCopyFeedback] = useState("");
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const bubbleRef = useRef<HTMLDivElement | null>(null);
@@ -50,6 +52,7 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
       {},
     ),
   );
+  const richMessage = parseRichMessage(message.message);
 
   const isImageAttachment = (attachment: Attachment) => {
     const name = `${attachment.original_name ?? attachment.filename}`.toLowerCase();
@@ -112,6 +115,18 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
     if (longPressTimeoutRef.current) {
       window.clearTimeout(longPressTimeoutRef.current);
       longPressTimeoutRef.current = null;
+    }
+  };
+
+  const copyRichMessageValue = async (value: string) => {
+    setCopyFeedback("");
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyFeedback("Copiado");
+      window.setTimeout(() => setCopyFeedback(""), 1600);
+    } catch {
+      setCopyFeedback("Copie manualmente");
     }
   };
 
@@ -217,6 +232,24 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
           ) : null}
           {isDeleted ? (
             <p className={`${styles.text} ${styles.deletedText}`}>Mensagem apagada</p>
+          ) : richMessage?.type === "pix" ? (
+            <div className={styles.pixCard}>
+              <span className={styles.pixIcon}>PIX</span>
+              <div className={styles.pixContent}>
+                <strong>{richMessage.title}</strong>
+                <p>{richMessage.body}</p>
+                <code>{richMessage.copyValue}</code>
+              </div>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void copyRichMessageValue(richMessage.copyValue);
+                }}
+              >
+                {copyFeedback || richMessage.copyLabel || "Copiar"}
+              </button>
+            </div>
           ) : message.message ? (
             <p className={styles.text}>{message.message}</p>
           ) : null}

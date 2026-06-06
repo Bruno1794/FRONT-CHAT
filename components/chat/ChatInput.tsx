@@ -15,6 +15,7 @@ import { Button } from "@/components/common/Button";
 import { getShortcutSuggestions } from "@/services/chatApi";
 import type { Shortcut } from "@/types";
 import { formatFileSize } from "@/utils/formatters";
+import { getRichMessagePreview, parseRichMessage } from "@/utils/richMessages";
 import styles from "./ChatInput.module.css";
 
 const quickEmojis = [
@@ -56,6 +57,7 @@ export function ChatInput({
   onSend,
 }: Props) {
   const [message, setMessage] = useState("");
+  const [messageToSend, setMessageToSend] = useState<string | null>(null);
   const [recordingError, setRecordingError] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -180,13 +182,15 @@ export function ChatInput({
 
   const submitMessage = async () => {
     const trimmed = message.trim();
+    const nextMessage = messageToSend ?? trimmed;
 
     if ((!trimmed && files.length === 0) || disabled || isSending) {
       return;
     }
 
-    await onSend?.(trimmed, files);
+    await onSend?.(nextMessage, files);
     setMessage("");
+    setMessageToSend(null);
     onFilesChange?.([]);
     setShortcuts([]);
     setIsEmojiPickerOpen(false);
@@ -194,7 +198,10 @@ export function ChatInput({
   };
 
   const applyShortcut = (shortcut: Shortcut) => {
-    setMessage(shortcut.message);
+    const richMessage = parseRichMessage(shortcut.message);
+
+    setMessage(richMessage ? getRichMessagePreview(shortcut.message) : shortcut.message);
+    setMessageToSend(richMessage ? shortcut.message : null);
     setShortcuts([]);
     setShortcutError("");
   };
@@ -238,6 +245,7 @@ export function ChatInput({
 
   const handleMessageChange = (value: string) => {
     setMessage(value);
+    setMessageToSend(null);
 
     if (!value.startsWith("/")) {
       setShortcuts([]);
@@ -482,7 +490,7 @@ export function ChatInput({
               <span>/{shortcut.shortcut}</span>
               <div>
                 <strong>{shortcut.title}</strong>
-                <small>{shortcut.message}</small>
+                <small>{getRichMessagePreview(shortcut.message)}</small>
               </div>
             </button>
           ))}
