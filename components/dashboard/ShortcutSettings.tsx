@@ -13,7 +13,7 @@ import {
 } from "@/services/chatApi";
 import type { ClientAccessLink, Shortcut, User } from "@/types";
 import {
-  buildPixCardMessage,
+  buildCardMessage,
   getRichMessagePreview,
   parseRichMessage,
 } from "@/utils/richMessages";
@@ -29,8 +29,14 @@ type FormState = {
   shortcut: string;
   title: string;
   message: string;
-  kind: "text" | "pix";
-  pixKey: string;
+  kind: "text" | "card";
+  cardValue: string;
+  button1Label: string;
+  button1Type: "copy" | "link" | "reply";
+  button1Value: string;
+  button2Label: string;
+  button2Type: "copy" | "link" | "reply";
+  button2Value: string;
   active: boolean;
   global: boolean;
 };
@@ -46,7 +52,13 @@ const emptyForm: FormState = {
   title: "",
   message: "",
   kind: "text",
-  pixKey: "",
+  cardValue: "",
+  button1Label: "",
+  button1Type: "copy",
+  button1Value: "",
+  button2Label: "",
+  button2Type: "reply",
+  button2Value: "",
   active: true,
   global: false,
 };
@@ -122,9 +134,15 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     setForm({
       shortcut: shortcut.shortcut,
       title: shortcut.title,
-      message: richMessage?.type === "pix" ? richMessage.body : shortcut.message,
-      kind: richMessage?.type === "pix" ? "pix" : "text",
-      pixKey: richMessage?.type === "pix" ? richMessage.copyValue : "",
+      message: richMessage?.type === "card" ? richMessage.body : shortcut.message,
+      kind: richMessage?.type === "card" ? "card" : "text",
+      cardValue: richMessage?.type === "card" ? richMessage.value ?? "" : "",
+      button1Label: richMessage?.actions[0]?.label ?? "",
+      button1Type: richMessage?.actions[0]?.type ?? "copy",
+      button1Value: richMessage?.actions[0]?.value ?? "",
+      button2Label: richMessage?.actions[1]?.label ?? "",
+      button2Type: richMessage?.actions[1]?.type ?? "reply",
+      button2Value: richMessage?.actions[1]?.value ?? "",
       active: shortcut.active,
       global: shortcut.user_id === null,
     });
@@ -152,8 +170,23 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     setError("");
 
     try {
-      if (form.kind === "pix" && !form.pixKey.trim()) {
-        setError("Informe a chave Pix para criar o botao de copiar.");
+      const actions = [
+        {
+          id: "button-1",
+          label: form.button1Label.trim(),
+          type: form.button1Type,
+          value: form.button1Value.trim(),
+        },
+        {
+          id: "button-2",
+          label: form.button2Label.trim(),
+          type: form.button2Type,
+          value: form.button2Value.trim(),
+        },
+      ].filter((action) => action.label && action.value);
+
+      if (form.kind === "card" && actions.length === 0) {
+        setError("Configure pelo menos um botao do card.");
         return;
       }
 
@@ -161,13 +194,14 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
         shortcut: form.shortcut.replace(/^\//, "").trim(),
         title: form.title.trim(),
         message:
-          form.kind === "pix"
-            ? buildPixCardMessage({
-                type: "pix",
+          form.kind === "card"
+            ? buildCardMessage({
+                type: "card",
+                variant: actions.some((action) => action.type === "copy") ? "pix" : "default",
                 title: form.title.trim() || "Pix",
-                body: form.message.trim() || "Copie a chave Pix abaixo.",
-                copyValue: form.pixKey.trim(),
-                copyLabel: "Copiar Pix",
+                body: form.message.trim(),
+                value: form.cardValue.trim() || undefined,
+                actions,
               })
             : form.message.trim(),
         global: user?.role === "ADMIN" ? form.global : false,
@@ -201,6 +235,53 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao excluir atalho.");
     }
+  };
+
+  const applyCardPreset = (preset: "pix" | "link" | "confirm") => {
+    if (preset === "pix") {
+      setForm((current) => ({
+        ...current,
+        kind: "card",
+        title: current.title || "Pagamento via Pix",
+        message: current.message || "Use o botao abaixo para copiar a chave Pix.",
+        button1Label: "Copiar Pix",
+        button1Type: "copy",
+        button1Value: current.cardValue || current.button1Value,
+        button2Label: "",
+        button2Type: "reply",
+        button2Value: "",
+      }));
+      return;
+    }
+
+    if (preset === "link") {
+      setForm((current) => ({
+        ...current,
+        kind: "card",
+        title: current.title || "Mais informacoes",
+        message: current.message || "Toque no botao para abrir os detalhes.",
+        button1Label: "Saiba mais",
+        button1Type: "link",
+        button1Value: current.button1Value,
+        button2Label: "",
+        button2Type: "reply",
+        button2Value: "",
+      }));
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      kind: "card",
+      title: current.title || "Confirmar informacao",
+      message: current.message || "Pode confirmar para mim?",
+      button1Label: "Sim",
+      button1Type: "reply",
+      button1Value: "Sim",
+      button2Label: "Nao",
+      button2Type: "reply",
+      button2Value: "Nao",
+    }));
   };
 
   const handleToggleActive = async (shortcut: Shortcut) => {
@@ -615,8 +696,8 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
                 required
                 rows={6}
                 placeholder={
-                  form.kind === "pix"
-                    ? "Ex: Segue nosso Pix para pagamento."
+                  form.kind === "card"
+                    ? "Ex: Segue a informacao para voce escolher uma opcao."
                     : "Ola, tudo bem? Como posso ajudar?"
                 }
                 value={form.message}
@@ -638,29 +719,100 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
                 <small>Envia somente a mensagem cadastrada.</small>
               </button>
               <button
-                className={form.kind === "pix" ? styles.activeShortcutType : ""}
+                className={form.kind === "card" ? styles.activeShortcutType : ""}
                 type="button"
                 onClick={() =>
-                  setForm((current) => ({ ...current, kind: "pix" }))
+                  setForm((current) => ({ ...current, kind: "card" }))
                 }
               >
-                <strong>Pix com copiar</strong>
-                <small>Mostra card com chave Pix e botao para copiar.</small>
+                <strong>Card com botoes</strong>
+                <small>Permite copiar, abrir link ou responder Sim/Nao.</small>
               </button>
             </div>
 
-            {form.kind === "pix" ? (
-              <label>
-                Chave Pix
-                <input
-                  required
-                  placeholder="CPF, CNPJ, email, telefone ou chave aleatoria"
-                  value={form.pixKey}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, pixKey: event.target.value }))
-                  }
-                />
-              </label>
+            {form.kind === "card" ? (
+              <div className={styles.cardShortcutConfig}>
+                <div className={styles.cardPresetActions}>
+                  <button type="button" onClick={() => applyCardPreset("pix")}>
+                    Pix
+                  </button>
+                  <button type="button" onClick={() => applyCardPreset("link")}>
+                    Saiba mais
+                  </button>
+                  <button type="button" onClick={() => applyCardPreset("confirm")}>
+                    Sim / Nao
+                  </button>
+                </div>
+
+                <label>
+                  Valor em destaque opcional
+                  <input
+                    placeholder="Ex: chave Pix, protocolo, codigo..."
+                    value={form.cardValue}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        cardValue: event.target.value,
+                        button1Value:
+                          current.button1Type === "copy" && !current.button1Value
+                            ? event.target.value
+                            : current.button1Value,
+                      }))
+                    }
+                  />
+                </label>
+
+                {[1, 2].map((buttonNumber) => {
+                  const labelKey = buttonNumber === 1 ? "button1Label" : "button2Label";
+                  const typeKey = buttonNumber === 1 ? "button1Type" : "button2Type";
+                  const valueKey = buttonNumber === 1 ? "button1Value" : "button2Value";
+
+                  return (
+                    <div className={styles.shortcutButtonConfig} key={buttonNumber}>
+                      <strong>Botao {buttonNumber}</strong>
+                      <input
+                        placeholder={buttonNumber === 1 ? "Ex: Copiar Pix" : "Ex: Nao"}
+                        value={form[labelKey]}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            [labelKey]: event.target.value,
+                          }))
+                        }
+                      />
+                      <select
+                        value={form[typeKey]}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            [typeKey]: event.target.value as FormState[typeof typeKey],
+                          }))
+                        }
+                      >
+                        <option value="copy">Copiar</option>
+                        <option value="link">Abrir link</option>
+                        <option value="reply">Responder</option>
+                      </select>
+                      <input
+                        placeholder={
+                          form[typeKey] === "link"
+                            ? "https://..."
+                            : form[typeKey] === "reply"
+                              ? "Texto enviado ao clicar"
+                              : "Texto que sera copiado"
+                        }
+                        value={form[valueKey]}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            [valueKey]: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             ) : null}
 
             <div className={styles.formChecks}>

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Attachment, Message } from "@/types";
 import { getAttachmentFileUrl, getAttachmentUrl } from "@/utils/attachments";
 import { formatTime } from "@/utils/formatters";
-import { parseRichMessage } from "@/utils/richMessages";
+import { parseRichMessage, type RichMessageAction } from "@/utils/richMessages";
 import { FilePreview } from "./FilePreview";
 import styles from "./MessageBubble.module.css";
 
@@ -18,9 +18,17 @@ interface Props {
   onReact?: (message: Message, emoji: string) => void;
   onEdit?: (message: Message) => void;
   onDelete?: (message: Message) => void;
+  onActionReply?: (text: string) => void;
 }
 
-export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Props) {
+export function MessageBubble({
+  message,
+  isMe,
+  onReact,
+  onEdit,
+  onDelete,
+  onActionReply,
+}: Props) {
   const [previewImage, setPreviewImage] = useState<{
     alt: string;
     url: string;
@@ -130,6 +138,20 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
     }
   };
 
+  const handleRichMessageAction = async (action: RichMessageAction) => {
+    if (action.type === "copy") {
+      await copyRichMessageValue(action.value);
+      return;
+    }
+
+    if (action.type === "link") {
+      window.open(action.value, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    onActionReply?.(action.value || action.label);
+  };
+
   return (
     <>
       <div
@@ -232,23 +254,28 @@ export function MessageBubble({ message, isMe, onReact, onEdit, onDelete }: Prop
           ) : null}
           {isDeleted ? (
             <p className={`${styles.text} ${styles.deletedText}`}>Mensagem apagada</p>
-          ) : richMessage?.type === "pix" ? (
-            <div className={styles.pixCard}>
-              <span className={styles.pixIcon}>PIX</span>
-              <div className={styles.pixContent}>
+          ) : richMessage?.type === "card" ? (
+            <div className={styles.actionCard}>
+              <div className={styles.actionCardHeader}>
+                <span>{richMessage.variant === "pix" ? "PIX" : "INFO"}</span>
                 <strong>{richMessage.title}</strong>
-                <p>{richMessage.body}</p>
-                <code>{richMessage.copyValue}</code>
               </div>
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void copyRichMessageValue(richMessage.copyValue);
-                }}
-              >
-                {copyFeedback || richMessage.copyLabel || "Copiar"}
-              </button>
+              {richMessage.body ? <p>{richMessage.body}</p> : null}
+              {richMessage.value ? <code>{richMessage.value}</code> : null}
+              <div className={styles.actionCardButtons}>
+                {richMessage.actions.map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleRichMessageAction(action);
+                    }}
+                  >
+                    {copyFeedback && action.type === "copy" ? copyFeedback : action.label}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : message.message ? (
             <p className={styles.text}>{message.message}</p>

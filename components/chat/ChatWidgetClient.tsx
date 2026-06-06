@@ -1181,6 +1181,10 @@ export function ChatWidgetClient() {
     }
   };
 
+  const handleActionReply = async (text: string) => {
+    await handleSend(text, []);
+  };
+
   const handleReactToMessage = async (message: Message, emoji: string) => {
     if (!conversation || message.id <= 0) {
       return;
@@ -1612,6 +1616,7 @@ export function ChatWidgetClient() {
                     onReact={handleReactToMessage}
                     onEdit={handleEditMessage}
                     onDelete={handleDeleteMessage}
+                    onActionReply={handleActionReply}
                   />
                 </div>
               );

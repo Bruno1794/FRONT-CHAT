@@ -1558,6 +1558,10 @@ export function DashboardClient() {
     }
   };
 
+  const handleActionReply = async (text: string) => {
+    await handleSend(text, []);
+  };
+
   const handleReactToMessage = async (message: Message, emoji: string) => {
     if (!token || !user || message.id <= 0) {
       return;
@@ -2141,6 +2145,7 @@ export function DashboardClient() {
                       onReact={handleReactToMessage}
                       onEdit={handleEditMessage}
                       onDelete={handleDeleteMessage}
+                      onActionReply={handleActionReply}
                     />
                   </div>
                 );

@@ -507,6 +507,7 @@
 .clientAccessLinkBox input,
 .clientAccessLinkBox textarea,
 .shortcutModal input,
+.shortcutModal select,
 .shortcutModal textarea {
   width: 100%;
   border: 1px solid #d7e2de;
@@ -526,6 +527,7 @@
 .clientAccessLinkBox input:focus,
 .clientAccessLinkBox textarea:focus,
 .shortcutModal input:focus,
+.shortcutModal select:focus,
 .shortcutModal textarea:focus {
   border-color: #007a4d;
   box-shadow: 0 0 0 3px rgba(0, 122, 77, 0.12);
@@ -705,6 +707,11 @@
   padding: 0 12px;
 }
 
+.shortcutModal select {
+  min-height: 40px;
+  padding: 0 12px;
+}
+
 .shortcutModal textarea {
   min-height: 130px;
   resize: vertical;
@@ -749,6 +756,49 @@
   color: #68756f;
   font-size: 0.76rem;
   line-height: 1.35;
+}
+
+.cardShortcutConfig {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #edf0ef;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fbfcfc;
+}
+
+.cardPresetActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cardPresetActions button {
+  border: 1px solid #d7e2de;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #007a4d;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.cardPresetActions button:hover {
+  border-color: #007a4d;
+  background: #eaf8f2;
+}
+
+.shortcutButtonConfig {
+  display: grid;
+  grid-template-columns: 86px minmax(120px, 1fr) 130px minmax(140px, 1.2fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.shortcutButtonConfig strong {
+  color: #33403c;
+  font-size: 0.78rem;
 }
 
 .formChecks {
@@ -1685,6 +1735,10 @@
   }
 
   .shortcutTypeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .shortcutButtonConfig {
     grid-template-columns: 1fr;
   }
 
