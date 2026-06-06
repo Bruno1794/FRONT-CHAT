@@ -163,81 +163,69 @@
   display: grid;
   width: min(336px, 100%);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.other .actionCard {
-  border-color: #d7e9e2;
+  border: 1px solid #d9e7e1;
+  border-radius: 14px;
   background: #ffffff;
+  color: #17231f;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
 .actionCardHeader {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 11px 12px 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
 }
 
 .actionCardHeader span {
-  flex: 0 0 auto;
-  border-radius: 999px;
-  padding: 4px 8px;
-  background: #dff5eb;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #dff5eb, #c6eee0);
   color: var(--primary);
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 900;
-  letter-spacing: 0.04em;
-}
-
-.own .actionCardHeader span {
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  letter-spacing: 0.01em;
 }
 
 .actionCardHeader strong {
+  display: block;
   overflow: hidden;
   min-width: 0;
-  font-size: 0.92rem;
+  color: #111827;
+  font-size: 0.94rem;
+  line-height: 1.22;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.actionCard p {
-  margin: 7px 12px 0;
+.actionCardHeader p {
+  margin: 4px 0 0;
+  color: #5f6b66;
+  font-size: 0.83rem;
   line-height: 1.38;
-  opacity: 0.88;
 }
 
 .actionCard code {
   overflow: hidden;
-  margin: 10px 12px 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.26);
-  border-radius: 8px;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.1);
-  color: currentColor;
+  margin: 0 12px 12px;
+  border: 1px solid #d7e9e2;
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: #f6fbf8;
+  color: #1d3b32;
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.other .actionCard code {
-  border-color: #c7ded5;
-  background: #f4faf7;
-  color: #1d3b32;
-}
-
 .actionCardButtons {
   display: grid;
-  border-top: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.other .actionCardButtons {
-  border-top-color: #dce9e4;
+  border-top: 1px solid #dce9e4;
   background: #fbfdfc;
 }
 
@@ -248,10 +236,10 @@
   justify-content: center;
   gap: 8px;
   border: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  border-top: 1px solid #dce9e4;
   padding: 10px 12px;
   background: transparent;
-  color: #ffffff;
+  color: var(--primary);
   cursor: pointer;
   font-size: 0.84rem;
   font-weight: 900;
@@ -264,44 +252,17 @@
   border-top: 0;
 }
 
-.other .actionCardButtons button {
-  border-top-color: #dce9e4;
-  color: var(--primary);
-}
-
-.actionCardButtons button::before {
-  display: grid;
-  width: 20px;
-  height: 20px;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  color: currentColor;
-  font-size: 0.72rem;
-  line-height: 1;
-}
-
-.other .actionCardButtons button::before {
-  background: #e6f7ef;
-}
-
-.actionCardButtons button[data-action="copy"]::before {
-  content: "C";
-}
-
-.actionCardButtons button[data-action="link"]::before {
-  content: ">";
-}
-
-.actionCardButtons button[data-action="reply"]::before {
-  content: "R";
+.actionCardButtons svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  fill: none;
 }
 
 .actionCardButtons button:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.other .actionCardButtons button:hover {
   background: #eaf8f2;
 }
 

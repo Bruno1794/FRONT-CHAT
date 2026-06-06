@@ -152,6 +152,33 @@ export function MessageBubble({
     onActionReply?.(action.value || action.label);
   };
 
+  const getActionIconPath = (actionType: RichMessageAction["type"]) => {
+    if (actionType === "copy") {
+      return (
+        <>
+          <rect x="9" y="9" width="10" height="10" rx="2" />
+          <path d="M5 15V7a2 2 0 0 1 2-2h8" />
+        </>
+      );
+    }
+
+    if (actionType === "link") {
+      return (
+        <>
+          <path d="M7 17 17 7" />
+          <path d="M9 7h8v8" />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <path d="m9 10-4 4 4 4" />
+        <path d="M5 14h9a5 5 0 0 0 0-10h-1" />
+      </>
+    );
+  };
+
   return (
     <>
       <div
@@ -257,10 +284,14 @@ export function MessageBubble({
           ) : richMessage?.type === "card" ? (
             <div className={styles.actionCard}>
               <div className={styles.actionCardHeader}>
-                <span>{richMessage.variant === "pix" ? "PIX" : "INFO"}</span>
-                <strong>{richMessage.title}</strong>
+                <span aria-hidden="true">
+                  {richMessage.variant === "pix" ? "Pix" : "Info"}
+                </span>
+                <div>
+                  <strong>{richMessage.title}</strong>
+                  {richMessage.body ? <p>{richMessage.body}</p> : null}
+                </div>
               </div>
-              {richMessage.body ? <p>{richMessage.body}</p> : null}
               {richMessage.value ? <code>{richMessage.value}</code> : null}
               <div className={styles.actionCardButtons}>
                 {richMessage.actions.map((action) => (
@@ -273,6 +304,9 @@ export function MessageBubble({
                       void handleRichMessageAction(action);
                     }}
                   >
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      {getActionIconPath(action.type)}
+                    </svg>
                     {copyFeedback && action.type === "copy" ? copyFeedback : action.label}
                   </button>
                 ))}
