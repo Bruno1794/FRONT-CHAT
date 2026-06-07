@@ -93,6 +93,19 @@ type StoredClientChat = {
   conversation: Conversation;
 };
 
+type SharedFileMetadata = {
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+};
+
+type SharedTargetMetadata = {
+  id: string;
+  files: SharedFileMetadata[];
+  created_at: number;
+};
+
 type PushState = "idle" | "unsupported" | "blocked" | "ready" | "subscribing" | "active" | "error";
 type PushAlertState = "idle" | "loading" | "active" | "error";
 
@@ -360,6 +373,7 @@ export function ChatWidgetClient() {
 
   const searchParams = useSearchParams();
   const initialCode = searchParams.get("code") ?? "";
+  const initialShareId = searchParams.get("share") ?? "";
   const [codigoAcesso, setCodigoAcesso] = useState(
     () => readStoredClientChat(initialCode)?.code ?? initialCode,
   );
@@ -417,6 +431,7 @@ export function ChatWidgetClient() {
   const latestMessagesRef = useRef<Message[]>(messages);
   const audioContextRef = useRef<AudioContext | null>(null);
   const hasAutoStartedRef = useRef(false);
+  const processedShareIdRef = useRef<string | null>(null);
   const socket = useSocket();
   const isAttendantOnline = Boolean(presence?.atendentes);
   const shouldShowInstallPrompt = !isPwaInstalled;
@@ -427,6 +442,69 @@ export function ChatWidgetClient() {
     Boolean(PUSHALERT_SCRIPT_URL) &&
     pushAlertState !== "active" &&
     !isPushAlertKnownActive;
+
+  useEffect(() => {
+    if (!initialShareId || processedShareIdRef.current === initialShareId) {
+      return;
+    }
+
+    let cancelled = false;
+    processedShareIdRef.current = initialShareId;
+
+    const clearShareParam = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("share");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+    };
+
+    const loadSharedFiles = async () => {
+      const metadataResponse = await fetch(
+        `/share-target-cache/${encodeURIComponent(initialShareId)}/metadata`,
+      );
+
+      if (!metadataResponse.ok) {
+        throw new Error("Nao foi possivel abrir o arquivo compartilhado.");
+      }
+
+      const metadata = (await metadataResponse.json()) as SharedTargetMetadata;
+      const files = await Promise.all(
+        metadata.files.map(async (sharedFile) => {
+          const fileResponse = await fetch(sharedFile.url);
+
+          if (!fileResponse.ok) {
+            throw new Error(`Nao foi possivel abrir ${sharedFile.name}.`);
+          }
+
+          const blob = await fileResponse.blob();
+
+          return new File([blob], sharedFile.name, {
+            lastModified: metadata.created_at,
+            type: sharedFile.type || blob.type || "application/octet-stream",
+          });
+        }),
+      );
+
+      if (!cancelled && files.length > 0) {
+        setPendingFiles((current) => [...current, ...files]);
+      }
+    };
+
+    void loadSharedFiles()
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Falha ao carregar compartilhamento.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          clearShareParam();
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialShareId]);
 
   const normalizeSearchValue = (value?: string | number | null) =>
     String(value ?? "")

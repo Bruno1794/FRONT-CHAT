@@ -1,4 +1,5 @@
-const CACHE_NAME = "suportesync-pwa-v3";
+const CACHE_NAME = "suportesync-pwa-v4";
+const SHARE_CACHE_NAME = "suportesync-share-target-v1";
 const STATIC_ASSETS = ["/", "/chat", "/dashboard", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -24,12 +25,16 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  const url = new URL(request.url);
+
+  if (request.method === "POST" && url.origin === self.location.origin && url.pathname === "/chat/share") {
+    event.respondWith(handleSharedFiles(request));
+    return;
+  }
 
   if (request.method !== "GET") {
     return;
   }
-
-  const url = new URL(request.url);
 
   if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) {
     return;
@@ -68,6 +73,57 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+
+async function handleSharedFiles(request) {
+  const formData = await request.formData();
+  const files = formData
+    .getAll("files")
+    .filter((item) => item instanceof File && item.size > 0);
+  const shareId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const cache = await caches.open(SHARE_CACHE_NAME);
+  const metadata = {
+    id: shareId,
+    title: String(formData.get("title") || ""),
+    text: String(formData.get("text") || ""),
+    url: String(formData.get("url") || ""),
+    files: [],
+    created_at: Date.now(),
+  };
+
+  await Promise.all(
+    files.map(async (file, index) => {
+      const safeName = file.name || `arquivo-${index + 1}`;
+      const fileUrl = `/share-target-cache/${shareId}/${index}-${encodeURIComponent(safeName)}`;
+
+      metadata.files.push({
+        name: safeName,
+        type: file.type || "application/octet-stream",
+        size: file.size,
+        url: fileUrl,
+      });
+
+      await cache.put(
+        fileUrl,
+        new Response(file, {
+          headers: {
+            "Content-Type": file.type || "application/octet-stream",
+          },
+        }),
+      );
+    }),
+  );
+
+  await cache.put(
+    `/share-target-cache/${shareId}/metadata`,
+    new Response(JSON.stringify(metadata), {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }),
+  );
+
+  return Response.redirect(`/chat?share=${encodeURIComponent(shareId)}`, 303);
+}
 
 self.addEventListener("push", (event) => {
   let payload = {};

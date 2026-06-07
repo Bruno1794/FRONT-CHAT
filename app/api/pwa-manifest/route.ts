@@ -71,6 +71,29 @@ export function GET(request: NextRequest) {
         purpose: "maskable",
       },
     ],
+    share_target: {
+      action: "/chat/share",
+      method: "POST",
+      enctype: "multipart/form-data",
+      params: {
+        title: "title",
+        text: "text",
+        url: "url",
+        files: [
+          {
+            name: "files",
+            accept: [
+              "image/*",
+              "application/pdf",
+              "application/zip",
+              "application/x-zip-compressed",
+              "application/vnd.android.package-archive",
+              "audio/*",
+            ],
+          },
+        ],
+      },
+    },
   };
 
   return Response.json(manifest, {
