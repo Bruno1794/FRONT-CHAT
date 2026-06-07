@@ -534,18 +534,39 @@ export function DashboardClient() {
   };
 
   const sortedClientes = useMemo(
-    () =>
-      [...clientes].sort((first, second) => {
+    () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayTime = today.getTime();
+
+      return [...clientes].sort((first, second) => {
+        const firstTime = getClienteVencimentoTime(first.vencimento);
+        const secondTime = getClienteVencimentoTime(second.vencimento);
+        const firstGroup = !Number.isFinite(firstTime)
+          ? 2
+          : firstTime >= todayTime
+            ? 0
+            : 1;
+        const secondGroup = !Number.isFinite(secondTime)
+          ? 2
+          : secondTime >= todayTime
+            ? 0
+            : 1;
+
+        if (firstGroup !== secondGroup) {
+          return firstGroup - secondGroup;
+        }
+
         const dateOrder =
-          getClienteVencimentoTime(first.vencimento) -
-          getClienteVencimentoTime(second.vencimento);
+          firstGroup === 1 ? secondTime - firstTime : firstTime - secondTime;
 
         if (dateOrder !== 0) {
           return dateOrder;
         }
 
         return (first.nome || "").localeCompare(second.nome || "", "pt-BR");
-      }),
+      });
+    },
     [clientes],
   );
   const totalClientesPages = Math.max(
