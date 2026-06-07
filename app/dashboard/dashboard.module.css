@@ -165,11 +165,14 @@
 
 .clientsView {
   display: grid;
+  flex: 1;
+  align-content: start;
   gap: 18px;
   min-height: 0;
   overflow: auto;
   padding: 28px;
   background: #f7faf8;
+  -webkit-overflow-scrolling: touch;
   animation: panelIn 220ms var(--ease-out);
 }
 
