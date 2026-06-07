@@ -164,16 +164,14 @@
 }
 
 .clientsView {
-  display: grid;
+  display: flex;
   flex: 1;
-  align-content: start;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  flex-direction: column;
   gap: 18px;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   padding: 28px;
   background: #f7faf8;
-  -webkit-overflow-scrolling: touch;
   animation: panelIn 220ms var(--ease-out);
 }
 
@@ -259,6 +257,7 @@
 }
 
 .clientsTable {
+  flex: 1;
   min-height: 0;
   overflow: auto;
   border: 1px solid #dfe8e4;
@@ -315,6 +314,7 @@
 
 .clientsPagination {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
