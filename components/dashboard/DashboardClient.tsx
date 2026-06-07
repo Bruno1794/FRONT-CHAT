@@ -71,6 +71,7 @@ type PushState = "idle" | "unsupported" | "blocked" | "ready" | "subscribing" | 
 const ADMIN_PUSH_ENABLED_KEY = "suportesync.adminPushEnabled";
 const ADMIN_PUSHALERT_ENABLED_KEY = "suportesync.adminPushAlertEnabled";
 const PUSHALERT_SCRIPT_URL = process.env.NEXT_PUBLIC_PUSHALERT_SCRIPT_URL ?? "";
+const CLIENTES_PAGE_SIZE = 10;
 
 type PushAlertQueueItem = [string, (...args: unknown[]) => void];
 
@@ -385,6 +386,7 @@ export function DashboardClient() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clientesSearch, setClientesSearch] = useState("");
+  const [clientesPage, setClientesPage] = useState(1);
   const [isClientesLoading, setIsClientesLoading] = useState(false);
   const [clientesError, setClientesError] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -503,7 +505,11 @@ export function DashboardClient() {
       return "Nao informado";
     }
 
-    const date = new Date(value);
+    const normalizedValue = value.trim();
+    const brDateMatch = normalizedValue.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const date = brDateMatch
+      ? new Date(`${brDateMatch[3]}-${brDateMatch[2]}-${brDateMatch[1]}T00:00:00`)
+      : new Date(normalizedValue);
 
     if (Number.isNaN(date.getTime())) {
       return value;
@@ -511,6 +517,47 @@ export function DashboardClient() {
 
     return date.toLocaleDateString("pt-BR");
   };
+
+  const getClienteVencimentoTime = (value?: string | null) => {
+    if (!value) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    const normalizedValue = value.trim();
+    const brDateMatch = normalizedValue.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const date = brDateMatch
+      ? new Date(`${brDateMatch[3]}-${brDateMatch[2]}-${brDateMatch[1]}T00:00:00`)
+      : new Date(normalizedValue);
+    const time = date.getTime();
+
+    return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+  };
+
+  const sortedClientes = useMemo(
+    () =>
+      [...clientes].sort((first, second) => {
+        const dateOrder =
+          getClienteVencimentoTime(first.vencimento) -
+          getClienteVencimentoTime(second.vencimento);
+
+        if (dateOrder !== 0) {
+          return dateOrder;
+        }
+
+        return (first.nome || "").localeCompare(second.nome || "", "pt-BR");
+      }),
+    [clientes],
+  );
+  const totalClientesPages = Math.max(
+    1,
+    Math.ceil(sortedClientes.length / CLIENTES_PAGE_SIZE),
+  );
+  const currentClientesPage = Math.min(clientesPage, totalClientesPages);
+  const paginatedClientes = useMemo(() => {
+    const startIndex = (currentClientesPage - 1) * CLIENTES_PAGE_SIZE;
+
+    return sortedClientes.slice(startIndex, startIndex + CLIENTES_PAGE_SIZE);
+  }, [currentClientesPage, sortedClientes]);
 
   const getInitials = (value?: string | null) => {
     if (!value) {
@@ -763,6 +810,7 @@ export function DashboardClient() {
     try {
       const data = await getClientes(token, clientesSearch.trim());
       setClientes(data.filter(isClienteAtivo));
+      setClientesPage(1);
     } catch (err) {
       setClientesError(err instanceof Error ? err.message : "Falha ao carregar clientes.");
     } finally {
@@ -1920,7 +1968,10 @@ export function DashboardClient() {
               <input
                 placeholder="Buscar por nome, referencia ou telefone"
                 value={clientesSearch}
-                onChange={(event) => setClientesSearch(event.target.value)}
+                onChange={(event) => {
+                  setClientesSearch(event.target.value);
+                  setClientesPage(1);
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     void loadClientes();
@@ -1944,11 +1995,11 @@ export function DashboardClient() {
                 <span>Status</span>
               </div>
 
-              {!isClientesLoading && clientes.length === 0 ? (
+              {!isClientesLoading && sortedClientes.length === 0 ? (
                 <p className={styles.state}>Nenhum cliente ativo encontrado.</p>
               ) : null}
 
-              {clientes.map((cliente) => (
+              {paginatedClientes.map((cliente) => (
                 <article className={styles.clientRow} key={cliente.id}>
                   <strong>{cliente.nome || "Sem nome"}</strong>
                   <span>{cliente.referencia ?? cliente.usuario_referencia ?? "Nao informada"}</span>
@@ -1958,6 +2009,37 @@ export function DashboardClient() {
                 </article>
               ))}
             </section>
+
+            {sortedClientes.length > CLIENTES_PAGE_SIZE ? (
+              <div className={styles.clientsPagination}>
+                <span>
+                  Pagina {currentClientesPage} de {totalClientesPages} -{" "}
+                  {sortedClientes.length} clientes ativos
+                </span>
+                <div>
+                  <button
+                    type="button"
+                    disabled={currentClientesPage === 1}
+                    onClick={() =>
+                      setClientesPage((currentPage) => Math.max(1, currentPage - 1))
+                    }
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    disabled={currentClientesPage === totalClientesPages}
+                    onClick={() =>
+                      setClientesPage((currentPage) =>
+                        Math.min(totalClientesPages, currentPage + 1),
+                      )
+                    }
+                  >
+                    Proxima
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 

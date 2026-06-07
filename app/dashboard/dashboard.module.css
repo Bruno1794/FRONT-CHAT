@@ -307,6 +307,48 @@
   text-transform: uppercase;
 }
 
+.clientsPagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: #5a6762;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.clientsPagination div {
+  display: flex;
+  gap: 8px;
+}
+
+.clientsPagination button {
+  min-height: 36px;
+  border: 1px solid #d7e2de;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #007a4d;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 900;
+  padding: 0 14px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.clientsPagination button:hover:not(:disabled) {
+  border-color: #007a4d;
+  box-shadow: 0 8px 18px rgba(0, 122, 77, 0.12);
+  transform: translateY(-1px);
+}
+
+.clientsPagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .settingsView {
   flex: 1;
   min-height: 0;
@@ -1996,6 +2038,16 @@
 
   .clientsToolbar {
     grid-template-columns: 1fr;
+  }
+
+  .clientsPagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .clientsPagination div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .clientsTable {
