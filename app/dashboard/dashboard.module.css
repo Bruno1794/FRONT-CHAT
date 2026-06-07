@@ -167,6 +167,7 @@
   display: grid;
   flex: 1;
   align-content: start;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 18px;
   min-height: 0;
   overflow: auto;
@@ -258,10 +259,12 @@
 }
 
 .clientsTable {
-  overflow: hidden;
+  min-height: 0;
+  overflow: auto;
   border: 1px solid #dfe8e4;
   border-radius: 14px;
   background: #ffffff;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--shadow-sm);
 }
 
@@ -2004,6 +2007,7 @@
   .workspace {
     flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
 
   .adminPrompt {
@@ -2032,7 +2036,11 @@
   }
 
   .clientsView {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
     padding: 20px 14px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
   }
 
   .clientsHeader {
@@ -2056,6 +2064,7 @@
   .clientsTable {
     display: grid;
     gap: 10px;
+    align-content: start;
     border: 0;
     background: transparent;
     box-shadow: none;
