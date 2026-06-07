@@ -3,6 +3,7 @@ import type {
   Attachment,
   AuthResponse,
   BroadcastNoticeResult,
+  Cliente,
   ClientAccessLink,
   ClearDataResult,
   Conversation,
@@ -94,6 +95,20 @@ export function getClientAccessLink(token: string, clienteId: string) {
     `/conversations/client-access/${encodeURIComponent(clienteId)}`,
     { token },
   );
+}
+
+export function getClientes(token: string, search?: string) {
+  const params = new URLSearchParams();
+
+  if (search) {
+    params.set("search", search);
+  }
+
+  const query = params.toString();
+
+  return apiFetch<Cliente[]>(`/clientes${query ? `?${query}` : ""}`, {
+    token,
+  });
 }
 
 export function updateConversation(

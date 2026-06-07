@@ -121,6 +121,8 @@ export interface Cliente {
   telefone?: string;
   email?: string;
   cidade?: string;
+  vencimento?: string | null;
+  status?: string | null;
 }
 
 export interface ClientAccessLink {

@@ -9,6 +9,7 @@ import styles from "./Sidebar.module.css";
 const navItems = [
   { href: "/dashboard?tab=dashboard", label: "Dashboard", icon: "DB", tab: "dashboard" },
   { href: "/dashboard?tab=chats", label: "Chats", icon: "CH", tab: "chats" },
+  { href: "/dashboard?tab=clientes", label: "Clientes", icon: "CL", tab: "clientes" },
   { href: "/dashboard?tab=settings", label: "Configuracoes", icon: "CF", tab: "settings" },
 ];
 

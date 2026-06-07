@@ -18,6 +18,7 @@ import {
   closeConversation,
   deleteMessageReaction,
   deleteMessage,
+  getClientes,
   getConversations,
   getMessages,
   getPushConfig,
@@ -34,6 +35,7 @@ import {
 } from "@/services/chatApi";
 import type {
   Attachment,
+  Cliente,
   Conversation,
   ConversationPresence,
   Message,
@@ -381,6 +383,10 @@ export function DashboardClient() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientesSearch, setClientesSearch] = useState("");
+  const [isClientesLoading, setIsClientesLoading] = useState(false);
+  const [clientesError, setClientesError] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [search, setSearch] = useState("");
@@ -482,6 +488,29 @@ export function DashboardClient() {
     conversation.cliente?.nome ??
     conversation.cliente_id_externo ??
     `Cliente ${conversation.id}`;
+
+  const isClienteAtivo = useCallback(
+    (cliente: Cliente) =>
+      String(cliente.status || "ATIVO")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") === "ativo",
+    [],
+  );
+
+  const formatClienteVencimento = (value?: string | null) => {
+    if (!value) {
+      return "Nao informado";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleDateString("pt-BR");
+  };
 
   const getInitials = (value?: string | null) => {
     if (!value) {
@@ -723,6 +752,24 @@ export function DashboardClient() {
     ],
   );
 
+  const loadClientes = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    setIsClientesLoading(true);
+    setClientesError("");
+
+    try {
+      const data = await getClientes(token, clientesSearch.trim());
+      setClientes(data.filter(isClienteAtivo));
+    } catch (err) {
+      setClientesError(err instanceof Error ? err.message : "Falha ao carregar clientes.");
+    } finally {
+      setIsClientesLoading(false);
+    }
+  }, [clientesSearch, isClienteAtivo, token]);
+
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
@@ -874,6 +921,18 @@ export function DashboardClient() {
 
     return () => window.removeEventListener("resize", openChatsOnMobile);
   }, [hasExplicitTab, router]);
+
+  useEffect(() => {
+    if (activeTab !== "clientes" || !token) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadClientes();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeTab, loadClientes, token]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -1841,6 +1900,64 @@ export function DashboardClient() {
                 <small>Usuario conectado</small>
               </article>
             </div>
+          </div>
+        ) : null}
+
+        {activeTab === "clientes" ? (
+          <div className={styles.clientsView}>
+            <header className={styles.clientsHeader}>
+              <div>
+                <span>Clientes</span>
+                <h1>Clientes ativos</h1>
+                <p>Lista sincronizada da API externa com status ativo.</p>
+              </div>
+              <button type="button" onClick={() => void loadClientes()}>
+                Atualizar
+              </button>
+            </header>
+
+            <div className={styles.clientsToolbar}>
+              <input
+                placeholder="Buscar por nome, referencia ou telefone"
+                value={clientesSearch}
+                onChange={(event) => setClientesSearch(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    void loadClientes();
+                  }
+                }}
+              />
+              <button type="button" onClick={() => void loadClientes()}>
+                Buscar
+              </button>
+            </div>
+
+            {clientesError ? <p className={styles.error}>{clientesError}</p> : null}
+            {isClientesLoading ? <p className={styles.state}>Carregando clientes...</p> : null}
+
+            <section className={styles.clientsTable}>
+              <div className={styles.clientsTableHeader}>
+                <span>Nome</span>
+                <span>Referencia</span>
+                <span>Telefone</span>
+                <span>Vencimento</span>
+                <span>Status</span>
+              </div>
+
+              {!isClientesLoading && clientes.length === 0 ? (
+                <p className={styles.state}>Nenhum cliente ativo encontrado.</p>
+              ) : null}
+
+              {clientes.map((cliente) => (
+                <article className={styles.clientRow} key={cliente.id}>
+                  <strong>{cliente.nome || "Sem nome"}</strong>
+                  <span>{cliente.referencia ?? cliente.usuario_referencia ?? "Nao informada"}</span>
+                  <span>{cliente.telefone ?? "Nao informado"}</span>
+                  <span>{formatClienteVencimento(cliente.vencimento)}</span>
+                  <span className={styles.clientStatus}>{cliente.status ?? "ATIVO"}</span>
+                </article>
+              ))}
+            </section>
           </div>
         ) : null}
 

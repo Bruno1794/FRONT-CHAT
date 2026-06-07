@@ -163,6 +163,150 @@
   font-weight: 800;
 }
 
+.clientsView {
+  display: grid;
+  gap: 18px;
+  min-height: 0;
+  overflow: auto;
+  padding: 28px;
+  background: #f7faf8;
+  animation: panelIn 220ms var(--ease-out);
+}
+
+.clientsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.clientsHeader span {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #dff5eb;
+  color: #007a4d;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.clientsHeader h1 {
+  margin: 14px 0 6px;
+  color: #10231d;
+  font-size: 1.8rem;
+}
+
+.clientsHeader p {
+  margin: 0;
+  color: #5a6762;
+}
+
+.clientsHeader button,
+.clientsToolbar button {
+  border: 0;
+  border-radius: 999px;
+  background: #007a4d;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 900;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.clientsHeader button {
+  min-height: 38px;
+  padding: 0 16px;
+}
+
+.clientsHeader button:hover,
+.clientsToolbar button:hover {
+  box-shadow: 0 10px 22px rgba(0, 122, 77, 0.16);
+  transform: translateY(-1px);
+}
+
+.clientsToolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) auto;
+  gap: 10px;
+}
+
+.clientsToolbar input {
+  min-height: 40px;
+  border: 1px solid #d7e2de;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  padding: 0 12px;
+}
+
+.clientsToolbar input:focus {
+  border-color: #007a4d;
+  box-shadow: 0 0 0 3px rgba(0, 122, 77, 0.12);
+  outline: 0;
+}
+
+.clientsToolbar button {
+  padding: 0 16px;
+}
+
+.clientsTable {
+  overflow: hidden;
+  border: 1px solid #dfe8e4;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.clientsTableHeader,
+.clientRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) minmax(120px, 0.8fr) minmax(130px, 0.8fr) minmax(120px, 0.7fr) minmax(96px, 0.5fr);
+  gap: 12px;
+  align-items: center;
+  padding: 13px 16px;
+}
+
+.clientsTableHeader {
+  background: #f4faf7;
+  color: #456158;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.clientRow {
+  border-top: 1px solid #edf3f0;
+  color: #42504b;
+  font-size: 0.88rem;
+}
+
+.clientRow strong,
+.clientRow span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clientRow strong {
+  color: #111827;
+}
+
+.clientStatus {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #dff5eb;
+  color: #007a4d;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .settingsView {
   flex: 1;
   min-height: 0;
@@ -1840,6 +1984,58 @@
 
   .placeholderGrid {
     grid-template-columns: 1fr;
+  }
+
+  .clientsView {
+    padding: 20px 14px;
+  }
+
+  .clientsHeader {
+    flex-direction: column;
+  }
+
+  .clientsToolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .clientsTable {
+    display: grid;
+    gap: 10px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .clientsTableHeader {
+    display: none;
+  }
+
+  .clientRow {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    border: 1px solid #dfe8e4;
+    border-radius: 12px;
+    background: #ffffff;
+  }
+
+  .clientRow span::before {
+    display: inline;
+    margin-right: 6px;
+    color: #66736e;
+    font-size: 0.72rem;
+    font-weight: 900;
+  }
+
+  .clientRow span:nth-child(2)::before {
+    content: "Referencia:";
+  }
+
+  .clientRow span:nth-child(3)::before {
+    content: "Telefone:";
+  }
+
+  .clientRow span:nth-child(4)::before {
+    content: "Vencimento:";
   }
 
   .settingsView {
