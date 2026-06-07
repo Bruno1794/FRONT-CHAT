@@ -47,6 +47,8 @@ type PasswordFormState = {
   confirmPassword: string;
 };
 
+type SettingsTab = "shortcuts" | "access" | "account" | "notifications" | "maintenance";
+
 const emptyForm: FormState = {
   shortcut: "",
   title: "",
@@ -94,6 +96,44 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
   const [isClearingData, setIsClearingData] = useState(false);
   const [clearFeedback, setClearFeedback] = useState("");
   const [clearError, setClearError] = useState("");
+  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>(
+    shouldStartWithNewShortcut ? "shortcuts" : "shortcuts",
+  );
+  const allSettingsTabs: Array<{
+    id: SettingsTab;
+    label: string;
+    description: string;
+  }> = [
+    {
+      id: "shortcuts",
+      label: "Atalhos",
+      description: "Respostas rapidas e cards com botoes",
+    },
+    {
+      id: "access",
+      label: "Acesso",
+      description: "Links e codigos do cliente",
+    },
+    {
+      id: "account",
+      label: "Conta",
+      description: "Senha do usuario logado",
+    },
+    {
+      id: "notifications",
+      label: "Notificacoes",
+      description: "Push do painel e celular",
+    },
+    {
+      id: "maintenance",
+      label: "Manutencao",
+      description: "Limpeza administrativa",
+    },
+  ];
+  const settingsTabs = allSettingsTabs.filter(
+    (tab) => tab.id !== "maintenance" || user?.role === "ADMIN",
+  );
+  const currentSettingsTab = settingsTabs.find((tab) => tab.id === activeSettingsTab) ?? settingsTabs[0];
 
   const loadShortcuts = useCallback(async () => {
     if (!token) {
@@ -416,16 +456,33 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
       <header className={styles.settingsHeader}>
         <div>
           <span>Configuracoes</span>
-          <h1>Atalhos de mensagem</h1>
-          <p>Cadastre respostas rapidas para usar no chat digitando /.</p>
+          <h1>{currentSettingsTab.label}</h1>
+          <p>{currentSettingsTab.description}</p>
         </div>
-        <button type="button" onClick={openCreateModal}>
-          Novo atalho
-        </button>
+        {activeSettingsTab === "shortcuts" ? (
+          <button type="button" onClick={openCreateModal}>
+            Novo atalho
+          </button>
+        ) : null}
       </header>
 
-      {notificationContent}
+      <nav className={styles.settingsTabs} aria-label="Configuracoes">
+        {settingsTabs.map((tab) => (
+          <button
+            className={tab.id === activeSettingsTab ? styles.activeSettingsTab : ""}
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveSettingsTab(tab.id)}
+          >
+            <strong>{tab.label}</strong>
+            <small>{tab.description}</small>
+          </button>
+        ))}
+      </nav>
 
+      {activeSettingsTab === "notifications" ? notificationContent : null}
+
+      {activeSettingsTab === "account" ? (
       <section className={styles.accountSettings}>
         <div className={styles.clientAccessHeader}>
           <div>
@@ -488,7 +545,9 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
           <p className={styles.clientAccessFeedback}>{passwordFeedback}</p>
         ) : null}
       </section>
+      ) : null}
 
+      {activeSettingsTab === "access" ? (
       <section className={styles.clientAccessSettings}>
         <div className={styles.clientAccessHeader}>
           <div>
@@ -564,8 +623,9 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
           </div>
         ) : null}
       </section>
+      ) : null}
 
-      {user?.role === "ADMIN" ? (
+      {activeSettingsTab === "maintenance" && user?.role === "ADMIN" ? (
         <section className={styles.dangerSettings}>
           <div className={styles.clientAccessHeader}>
             <div>
@@ -602,6 +662,8 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
         </section>
       ) : null}
 
+      {activeSettingsTab === "shortcuts" ? (
+      <>
       <div className={styles.settingsToolbar}>
         <input
           placeholder="Buscar por atalho, titulo ou mensagem"
@@ -650,6 +712,8 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
           </article>
         ))}
       </section>
+      </>
+      ) : null}
 
       {isModalOpen ? (
         <div className={styles.modalOverlay} role="presentation" onMouseDown={closeModal}>
