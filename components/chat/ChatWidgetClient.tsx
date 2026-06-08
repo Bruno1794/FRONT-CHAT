@@ -7,6 +7,7 @@ import { EditMessageModal } from "@/components/chat/EditMessageModal";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { useSocket } from "@/hooks/useSocket";
 import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
+import { getAccessToken } from "@/services/authStorage";
 import {
   createConversation,
   deleteMessage,
@@ -34,6 +35,7 @@ import type {
   MessageType,
 } from "@/types";
 import { formatMessageDateLabel, getDateKey } from "@/utils/formatters";
+import { clearShareParamFromUrl, loadSharedTargetFiles } from "@/utils/shareTarget";
 import styles from "@/app/chat/chat.module.css";
 
 const CLIENT_CHAT_SESSION_KEY = "suportesync.clientChat";
@@ -91,19 +93,6 @@ declare global {
 type StoredClientChat = {
   code: string;
   conversation: Conversation;
-};
-
-type SharedFileMetadata = {
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-};
-
-type SharedTargetMetadata = {
-  id: string;
-  files: SharedFileMetadata[];
-  created_at: number;
 };
 
 type PushState = "idle" | "unsupported" | "blocked" | "ready" | "subscribing" | "active" | "error";
@@ -451,38 +440,16 @@ export function ChatWidgetClient() {
     let cancelled = false;
     processedShareIdRef.current = initialShareId;
 
-    const clearShareParam = () => {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("share");
-      window.history.replaceState(null, "", `${url.pathname}${url.search}`);
-    };
-
     const loadSharedFiles = async () => {
-      const metadataResponse = await fetch(
-        `/share-target-cache/${encodeURIComponent(initialShareId)}/metadata`,
-      );
-
-      if (!metadataResponse.ok) {
-        throw new Error("Nao foi possivel abrir o arquivo compartilhado.");
+      if (getAccessToken()) {
+        cancelled = true;
+        window.location.replace(
+          `/dashboard?tab=chats&share=${encodeURIComponent(initialShareId)}`,
+        );
+        return;
       }
 
-      const metadata = (await metadataResponse.json()) as SharedTargetMetadata;
-      const files = await Promise.all(
-        metadata.files.map(async (sharedFile) => {
-          const fileResponse = await fetch(sharedFile.url);
-
-          if (!fileResponse.ok) {
-            throw new Error(`Nao foi possivel abrir ${sharedFile.name}.`);
-          }
-
-          const blob = await fileResponse.blob();
-
-          return new File([blob], sharedFile.name, {
-            lastModified: metadata.created_at,
-            type: sharedFile.type || blob.type || "application/octet-stream",
-          });
-        }),
-      );
+      const files = await loadSharedTargetFiles(initialShareId);
 
       if (!cancelled && files.length > 0) {
         setPendingFiles((current) => [...current, ...files]);
@@ -497,7 +464,7 @@ export function ChatWidgetClient() {
       })
       .finally(() => {
         if (!cancelled) {
-          clearShareParam();
+          clearShareParamFromUrl();
         }
       });
 

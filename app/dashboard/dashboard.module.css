@@ -1340,6 +1340,43 @@
   color: #ffffff;
 }
 
+.shareTargetNotice {
+  display: grid;
+  flex-shrink: 0;
+  gap: 6px;
+  margin: 0 16px 12px;
+  border: 1px solid #bfe4d4;
+  border-radius: 12px;
+  padding: 12px;
+  background: #eefaf5;
+  color: #173b31;
+}
+
+.shareTargetNotice strong {
+  font-size: 0.82rem;
+}
+
+.shareTargetNotice span {
+  overflow: hidden;
+  color: #52605b;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shareTargetNotice button {
+  justify-self: start;
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: #ffffff;
+  color: #007a4d;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
 .conversation {
   position: relative;
   display: grid;

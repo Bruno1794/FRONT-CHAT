@@ -51,6 +51,7 @@ import {
   getDateKey,
 } from "@/utils/formatters";
 import { getRichMessagePreview } from "@/utils/richMessages";
+import { clearShareParamFromUrl, loadSharedTargetFiles } from "@/utils/shareTarget";
 import styles from "@/app/dashboard/dashboard.module.css";
 
 type WindowWithAudioContext = Window & {
@@ -380,6 +381,7 @@ export function DashboardClient() {
   const searchParams = useSearchParams();
   const activeTabParam = searchParams.get("tab");
   const hasExplicitTab = searchParams.has("tab");
+  const initialShareId = searchParams.get("share") ?? "";
   const activeTab = activeTabParam ?? "dashboard";
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -394,6 +396,8 @@ export function DashboardClient() {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [sharedFilesToAttach, setSharedFilesToAttach] = useState<File[]>([]);
+  const [sharedFilesError, setSharedFilesError] = useState("");
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -451,6 +455,7 @@ export function DashboardClient() {
   const selectedIdRef = useRef<number | null>(null);
   const messagesRequestRef = useRef(0);
   const mobileThreadHistoryRef = useRef(false);
+  const processedAdminShareIdRef = useRef<string | null>(null);
   const socket = useSocket(token ?? undefined);
 
   const selectedConversation = useMemo(
@@ -842,6 +847,50 @@ export function DashboardClient() {
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  useEffect(() => {
+    if (
+      !initialShareId ||
+      !token ||
+      processedAdminShareIdRef.current === initialShareId
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    processedAdminShareIdRef.current = initialShareId;
+    setSharedFilesError("");
+
+    void loadSharedTargetFiles(initialShareId)
+      .then((files) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (files.length === 0) {
+          setSharedFilesError("Nenhum arquivo foi recebido do compartilhamento.");
+          return;
+        }
+
+        setSharedFilesToAttach(files);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setSharedFilesError(
+            err instanceof Error ? err.message : "Falha ao carregar arquivo compartilhado.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          clearShareParamFromUrl();
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialShareId, token]);
 
   useEffect(() => {
     latestMessagesRef.current = messages;
@@ -1800,6 +1849,11 @@ export function DashboardClient() {
     }
 
     setSelectedId(conversation.id);
+    if (sharedFilesToAttach.length > 0) {
+      setPendingFiles((current) => [...current, ...sharedFilesToAttach]);
+      setSharedFilesToAttach([]);
+      setSharedFilesError("");
+    }
     setIsMobileThreadOpen(true);
     setThreadSearch("");
     setIsThreadSearchOpen(false);
@@ -2113,6 +2167,34 @@ export function DashboardClient() {
               <span>Aguardando</span>
               <span>Finalizada</span>
             </div>
+            {sharedFilesToAttach.length > 0 || sharedFilesError ? (
+              <div className={styles.shareTargetNotice}>
+                {sharedFilesToAttach.length > 0 ? (
+                  <>
+                    <strong>
+                      {sharedFilesToAttach.length === 1
+                        ? "1 arquivo recebido"
+                        : `${sharedFilesToAttach.length} arquivos recebidos`}
+                    </strong>
+                    <span>
+                      Clique na conversa onde deseja anexar:{" "}
+                      {sharedFilesToAttach.map((file) => file.name).join(", ")}
+                    </span>
+                    <button type="button" onClick={() => setSharedFilesToAttach([])}>
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <strong>Compartilhamento</strong>
+                    <span>{sharedFilesError}</span>
+                    <button type="button" onClick={() => setSharedFilesError("")}>
+                      Fechar
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : null}
             {isLoading ? <p className={styles.state}>Carregando...</p> : null}
             {!isLoading && conversations.length === 0 ? (
               <p className={styles.state}>Nenhuma conversa encontrada.</p>
