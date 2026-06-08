@@ -2,6 +2,36 @@ import type { MetadataRoute } from "next";
 import { NextRequest } from "next/server";
 
 const DEFAULT_START_URL = "/dashboard?tab=chats";
+const SHARE_FILE_ACCEPT = [
+  "image/*",
+  "audio/*",
+  "application/pdf",
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/vnd.android.package-archive",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
+  "application/octet-stream",
+  ".pdf",
+  ".zip",
+  ".rar",
+  ".7z",
+  ".apk",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".txt",
+  ".csv",
+];
 
 function sanitizeStartUrl(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
@@ -82,14 +112,7 @@ export function GET(request: NextRequest) {
         files: [
           {
             name: "files",
-            accept: [
-              "image/*",
-              "application/pdf",
-              "application/zip",
-              "application/x-zip-compressed",
-              "application/vnd.android.package-archive",
-              "audio/*",
-            ],
+            accept: SHARE_FILE_ACCEPT,
           },
         ],
       },
