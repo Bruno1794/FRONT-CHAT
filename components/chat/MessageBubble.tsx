@@ -62,6 +62,7 @@ export function MessageBubble({
     ),
   );
   const richMessage = parseRichMessage(message.message);
+  const isPixMessage = richMessage?.variant === "pix";
   const pixExpiresAt =
     richMessage?.variant === "pix" && richMessage.expiresAt
       ? new Date(richMessage.expiresAt).getTime()
@@ -264,16 +265,18 @@ export function MessageBubble({
         >
           {isActionMenuOpen ? (
             <div className={styles.actionMenu}>
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setIsActionMenuOpen(false);
-                  onEdit?.(message);
-                }}
-              >
-                Editar
-              </button>
+              {!isPixMessage ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsActionMenuOpen(false);
+                    onEdit?.(message);
+                  }}
+                >
+                  Editar
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={(event) => {
