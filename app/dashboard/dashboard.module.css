@@ -1173,6 +1173,10 @@
   line-height: 1.45;
 }
 
+.pixModal {
+  width: min(420px, 100%);
+}
+
 .broadcastHelp {
   margin: 0;
   border-radius: 12px;

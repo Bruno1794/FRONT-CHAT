@@ -113,6 +113,23 @@ export interface BroadcastNoticeResult {
   push_conversations: number;
 }
 
+export interface PixCharge {
+  id: number;
+  conversation_id: number;
+  message_id?: number | null;
+  fastdepix_transaction_id: string;
+  amount: string | number;
+  status: string;
+  qr_code?: string | null;
+  qr_code_text?: string | null;
+  qr_code_expires_at?: string | null;
+}
+
+export interface PixChargeResult {
+  charge: PixCharge;
+  message: Message;
+}
+
 export interface Cliente {
   id: string;
   nome: string;

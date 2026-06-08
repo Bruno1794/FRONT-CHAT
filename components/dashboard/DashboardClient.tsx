@@ -16,6 +16,7 @@ import {
 } from "@/services/authStorage";
 import {
   closeConversation,
+  createPixCharge,
   deleteMessageReaction,
   deleteMessage,
   getClientes,
@@ -404,6 +405,10 @@ export function DashboardClient() {
   const [isMobileThreadOpen, setIsMobileThreadOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false);
+  const [pixAmount, setPixAmount] = useState("");
+  const [pixFeedback, setPixFeedback] = useState("");
+  const [isPixSending, setIsPixSending] = useState(false);
   const [broadcastTitle, setBroadcastTitle] = useState("Aviso do suporte");
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastFeedback, setBroadcastFeedback] = useState("");
@@ -1569,6 +1574,14 @@ export function DashboardClient() {
       patchConversationPreviewFromMessage(message);
     };
 
+    const handleMessageRemoved = (payload: { message_id?: number; conversation_id?: number }) => {
+      if (payload.conversation_id !== selectedId) {
+        return;
+      }
+
+      setMessages((current) => current.filter((item) => item.id !== payload.message_id));
+    };
+
     const handleConversationPresence = (presence: ConversationPresence) => {
       setConversationPresence((current) => ({
         ...current,
@@ -1598,6 +1611,7 @@ export function DashboardClient() {
     socket.on("message_read", handleMessageRead);
     socket.on("message_reaction_updated", handleMessageReaction);
     socket.on("message_updated", handleMessageUpdated);
+    socket.on("message_removed", handleMessageRemoved);
     socket.on("conversation_updated", reload);
     socket.on("conversation_presence", handleConversationPresence);
 
@@ -1615,9 +1629,10 @@ export function DashboardClient() {
       socket.off("message_received", handleMessage);
       socket.off("message_sent", handleMessage);
       socket.off("message_read", handleMessageRead);
-      socket.off("message_reaction_updated", handleMessageReaction);
-      socket.off("message_updated", handleMessageUpdated);
-      socket.off("conversation_updated", reload);
+    socket.off("message_reaction_updated", handleMessageReaction);
+    socket.off("message_updated", handleMessageUpdated);
+    socket.off("message_removed", handleMessageRemoved);
+    socket.off("conversation_updated", reload);
       socket.off("conversation_presence", handleConversationPresence);
     };
   }, [
@@ -1676,6 +1691,53 @@ export function DashboardClient() {
       );
     } finally {
       setIsBroadcastSending(false);
+    }
+  };
+
+  const handleCreatePixCharge = async () => {
+    if (!token || !selectedConversation) {
+      return;
+    }
+
+    const amount = Number(
+      pixAmount
+        .replace(/\./g, "")
+        .replace(",", ".")
+        .replace(/[^\d.]/g, ""),
+    );
+
+    if (!Number.isFinite(amount) || amount < 10) {
+      setPixFeedback("Informe um valor minimo de R$ 10,00.");
+      return;
+    }
+
+    setIsPixSending(true);
+    setPixFeedback("");
+
+    try {
+      const result = await createPixCharge(token, {
+        conversation_id: selectedConversation.id,
+        amount,
+        payer_phone: selectedConversation.cliente?.telefone,
+      });
+
+      setMessages((current) =>
+        current.some((item) => item.id === result.message.id)
+          ? current
+          : [...current, result.message],
+      );
+      patchConversationPreviewFromMessage(result.message);
+      setPixAmount("");
+      setPixFeedback("PIX enviado para o cliente.");
+      await loadConversations(token, selectedConversation.id);
+      window.setTimeout(() => {
+        setIsPixModalOpen(false);
+        setPixFeedback("");
+      }, 900);
+    } catch (err) {
+      setPixFeedback(err instanceof Error ? err.message : "Falha ao gerar PIX.");
+    } finally {
+      setIsPixSending(false);
     }
   };
 
@@ -2305,6 +2367,18 @@ export function DashboardClient() {
               <div className={styles.threadActions} aria-label="Acoes do atendimento">
                 <button
                   type="button"
+                  aria-label="Gerar PIX"
+                  disabled={!selectedConversation}
+                  onClick={() => setIsPixModalOpen(true)}
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="m12 3 9 9-9 9-9-9 9-9Z" />
+                    <path d="M8 12h8" />
+                    <path d="M12 8v8" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
                   aria-label="Buscar na conversa"
                   onClick={() => setIsThreadSearchOpen((current) => !current)}
                 >
@@ -2521,6 +2595,80 @@ export function DashboardClient() {
               onClose={() => setEditingMessage(null)}
               onSave={handleSaveEditedMessage}
             />
+          ) : null}
+          {isPixModalOpen ? (
+            <div
+              className={styles.modalOverlay}
+              role="presentation"
+              onMouseDown={() => {
+                setIsPixModalOpen(false);
+                setPixFeedback("");
+              }}
+            >
+              <section
+                className={`${styles.shortcutModal} ${styles.pixModal}`}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Gerar PIX"
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <header>
+                  <div>
+                    <span>PIX</span>
+                    <h2>Gerar cobranca</h2>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Fechar PIX"
+                    onClick={() => {
+                      setIsPixModalOpen(false);
+                      setPixFeedback("");
+                    }}
+                  >
+                    X
+                  </button>
+                </header>
+                <p className={styles.broadcastHelp}>
+                  Informe o valor para enviar QR Code, copia e cola e timer de
+                  expiracao no chat do cliente.
+                </p>
+                <label>
+                  <span>Valor</span>
+                  <input
+                    autoFocus
+                    inputMode="decimal"
+                    placeholder="Ex: 150,00"
+                    value={pixAmount}
+                    onChange={(event) => setPixAmount(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        void handleCreatePixCharge();
+                      }
+                    }}
+                  />
+                </label>
+                {pixFeedback ? <p className={styles.broadcastFeedback}>{pixFeedback}</p> : null}
+                <footer>
+                  <button
+                    type="button"
+                    disabled={isPixSending}
+                    onClick={() => {
+                      setIsPixModalOpen(false);
+                      setPixFeedback("");
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPixSending}
+                    onClick={() => void handleCreatePixCharge()}
+                  >
+                    {isPixSending ? "Gerando..." : "Enviar PIX"}
+                  </button>
+                </footer>
+              </section>
+            </div>
           ) : null}
           {isBroadcastModalOpen ? (
             <div

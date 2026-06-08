@@ -223,6 +223,36 @@
   white-space: nowrap;
 }
 
+.pixQrCode {
+  display: grid;
+  width: calc(100% - 24px);
+  place-items: center;
+  border: 1px solid #d7e9e2;
+  border-radius: 12px;
+  margin: 0 12px 10px;
+  padding: 10px;
+  background: #ffffff;
+  cursor: zoom-in;
+}
+
+.pixQrCode img {
+  display: block;
+  width: min(210px, 100%);
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.pixTimer {
+  width: fit-content;
+  margin: 0 12px 10px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #eaf8f2;
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
 .actionCardButtons {
   display: grid;
   border-top: 1px solid #dce9e4;

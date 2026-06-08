@@ -11,6 +11,7 @@ import type {
   ConversationStatus,
   Message,
   MessageType,
+  PixChargeResult,
   SenderType,
   Shortcut,
   UploadResponse,
@@ -80,6 +81,17 @@ export function sendBroadcastNotice(
   payload: { title?: string; message: string },
 ) {
   return apiFetch<BroadcastNoticeResult>("/broadcasts/notice", {
+    method: "POST",
+    token,
+    json: payload,
+  });
+}
+
+export function createPixCharge(
+  token: string,
+  payload: { conversation_id: number; amount: number; payer_phone?: string },
+) {
+  return apiFetch<PixChargeResult>("/pix/charges", {
     method: "POST",
     token,
     json: payload,

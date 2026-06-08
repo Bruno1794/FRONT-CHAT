@@ -37,6 +37,7 @@ export function MessageBubble({
   const [copyFeedback, setCopyFeedback] = useState("");
   const [isReactionPickerOpen, setIsReactionPickerOpen] = useState(false);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
   const bubbleRef = useRef<HTMLDivElement | null>(null);
   const longPressTimeoutRef = useRef<number | null>(null);
   const isDeleted = Boolean(message.deleted_at);
@@ -61,6 +62,24 @@ export function MessageBubble({
     ),
   );
   const richMessage = parseRichMessage(message.message);
+  const pixExpiresAt =
+    richMessage?.variant === "pix" && richMessage.expiresAt
+      ? new Date(richMessage.expiresAt).getTime()
+      : null;
+  const pixRemainingMs =
+    pixExpiresAt && Number.isFinite(pixExpiresAt)
+      ? Math.max(0, pixExpiresAt - now)
+      : null;
+  const pixRemainingText =
+    pixRemainingMs === null
+      ? ""
+      : pixRemainingMs <= 0
+        ? "Expirado"
+        : `${Math.floor(pixRemainingMs / 60000)
+            .toString()
+            .padStart(2, "0")}:${Math.floor((pixRemainingMs % 60000) / 1000)
+            .toString()
+            .padStart(2, "0")}`;
 
   const isImageAttachment = (attachment: Attachment) => {
     const name = `${attachment.original_name ?? attachment.filename}`.toLowerCase();
@@ -88,6 +107,16 @@ export function MessageBubble({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [previewImage]);
+
+  useEffect(() => {
+    if (!pixExpiresAt) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [pixExpiresAt]);
 
   useEffect(() => {
     if (!isReactionPickerOpen && !isActionMenuOpen) {
@@ -292,6 +321,26 @@ export function MessageBubble({
                   {richMessage.body ? <p>{richMessage.body}</p> : null}
                 </div>
               </div>
+              {richMessage.variant === "pix" && richMessage.imageUrl ? (
+                <button
+                  className={styles.pixQrCode}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setPreviewImage({
+                      alt: "QR Code PIX",
+                      url: richMessage.imageUrl || "",
+                    });
+                  }}
+                >
+                  <img alt="QR Code PIX" src={richMessage.imageUrl} />
+                </button>
+              ) : null}
+              {richMessage.variant === "pix" && pixRemainingText ? (
+                <span className={styles.pixTimer}>
+                  {pixRemainingMs === 0 ? "PIX expirado" : `Expira em ${pixRemainingText}`}
+                </span>
+              ) : null}
               {richMessage.value ? <code>{richMessage.value}</code> : null}
               <div className={styles.actionCardButtons}>
                 {richMessage.actions.map((action) => (

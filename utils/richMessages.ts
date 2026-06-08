@@ -14,6 +14,10 @@ export type CardMessage = {
   title: string;
   body: string;
   value?: string;
+  imageUrl?: string | null;
+  expiresAt?: string | null;
+  pixChargeId?: number;
+  pixStatus?: string;
   actions: RichMessageAction[];
 };
 

@@ -859,6 +859,14 @@ export function ChatWidgetClient() {
       );
     };
 
+    const handleMessageRemoved = (payload: { message_id?: number; conversation_id?: number }) => {
+      if (payload.conversation_id !== conversation.id) {
+        return;
+      }
+
+      setMessages((current) => current.filter((item) => item.id !== payload.message_id));
+    };
+
     const handleConversationUpdated = (payload?: { conversation_id?: number }) => {
       if (
         payload?.conversation_id &&
@@ -912,6 +920,7 @@ export function ChatWidgetClient() {
     socket.on("message_read", handleMessageRead);
     socket.on("message_reaction_updated", handleMessageReaction);
     socket.on("message_updated", handleMessageUpdated);
+    socket.on("message_removed", handleMessageRemoved);
     socket.on("conversation_updated", handleConversationUpdated);
     socket.on("conversation_presence", handleConversationPresence);
     socket.on("broadcast_notice", handleBroadcastNotice);
@@ -929,9 +938,10 @@ export function ChatWidgetClient() {
       socket.off("message_received", handleMessage);
       socket.off("message_sent", handleMessage);
       socket.off("message_read", handleMessageRead);
-      socket.off("message_reaction_updated", handleMessageReaction);
-      socket.off("message_updated", handleMessageUpdated);
-      socket.off("conversation_updated", handleConversationUpdated);
+    socket.off("message_reaction_updated", handleMessageReaction);
+    socket.off("message_updated", handleMessageUpdated);
+    socket.off("message_removed", handleMessageRemoved);
+    socket.off("conversation_updated", handleConversationUpdated);
       socket.off("conversation_presence", handleConversationPresence);
       socket.off("broadcast_notice", handleBroadcastNotice);
     };
