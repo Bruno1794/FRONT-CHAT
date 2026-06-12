@@ -44,7 +44,12 @@ export function MessageBubble({
   const hasAudioAttachment = Boolean(
     !isDeleted && message.attachments?.some((attachment) => attachment.mime_type.startsWith("audio/")),
   );
-  const isRead = Boolean(message.read || message.read_at);
+  const readAt =
+    message.read_at ||
+    message.viewed_at ||
+    message.visualized_at ||
+    message.visualizado_at;
+  const isRead = Boolean(message.read || readAt);
   const isDelivered = message.id > 0;
   const canManage = isMe && message.id > 0 && !isDeleted;
   const reactionGroups = Object.values(

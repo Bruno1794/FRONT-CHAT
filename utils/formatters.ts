@@ -53,32 +53,26 @@ export const formatFileSize = (bytes: number) => {
 
 export const formatLastSeen = (value?: string | null) => {
   if (!value) {
-    return "offline";
+    return "visto indisponivel";
   }
 
   const date = new Date(value);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
 
-  if (diffMinutes < 1) {
-    return "visto agora";
+  if (Number.isNaN(date.getTime())) {
+    return "visto indisponivel";
   }
 
-  if (diffMinutes < 60) {
-    return `visto ha ${diffMinutes} min`;
+  const today = new Date();
+  const sameDay = date.toDateString() === today.toDateString();
+
+  if (sameDay) {
+    return `visto hoje ${formatTime(value)}`;
   }
 
-  const diffHours = Math.floor(diffMinutes / 60);
-
-  if (diffHours < 24) {
-    return `visto ha ${diffHours} h`;
-  }
-
-  return `visto ${new Intl.DateTimeFormat("pt-BR", {
+  const dateLabel = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date)}`;
+  }).format(date);
+
+  return `visto ${dateLabel} ${formatTime(value)}`;
 };

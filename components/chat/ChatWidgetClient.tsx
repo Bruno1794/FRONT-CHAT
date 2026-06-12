@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { ChatOpeningPopup } from "@/components/chat/ChatOpeningPopup";
 import { EditMessageModal } from "@/components/chat/EditMessageModal";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { useSocket } from "@/hooks/useSocket";
@@ -1468,6 +1469,7 @@ export function ChatWidgetClient() {
       onClick={unlockNotificationSound}
       onKeyDown={unlockNotificationSound}
     >
+      <ChatOpeningPopup isConversationStarted={Boolean(conversation)} />
       <section className={styles.chat}>
         <header className={styles.header}>
           <span className={styles.avatar}>SS</span>

@@ -312,6 +312,44 @@ function waitForPushAlertSubscription() {
   });
 }
 
+function getLastSeenValue(conversation?: Conversation | null) {
+  return (
+    conversation?.last_seen ||
+    conversation?.ultimo_acesso ||
+    conversation?.last_activity ||
+    conversation?.cliente?.last_seen ||
+    conversation?.cliente?.ultimo_acesso ||
+    conversation?.cliente?.last_activity
+  );
+}
+
+function getLastClientMessageTime(messages: Message[], conversationId?: number) {
+  if (!conversationId) {
+    return undefined;
+  }
+
+  return [...messages]
+    .reverse()
+    .find(
+      (message) =>
+        message.conversation_id === conversationId &&
+        message.sender_type === "CLIENTE",
+    )?.created_at;
+}
+
+function getMessageReadAt(message?: Pick<
+  Message,
+  "read_at" | "viewed_at" | "visualized_at" | "visualizado_at"
+> | null) {
+  return (
+    message?.read_at ||
+    message?.viewed_at ||
+    message?.visualized_at ||
+    message?.visualizado_at ||
+    null
+  );
+}
+
 async function registerAdminPushAlertSubscription(token: string) {
   if (!PUSHALERT_SCRIPT_URL) {
     return false;
@@ -468,8 +506,16 @@ export function DashboardClient() {
     [conversations, selectedId],
   );
   const selectedPresence = selectedId ? conversationPresence[selectedId] : undefined;
-  const isSelectedClientOnline = Boolean(selectedPresence?.clientes);
-  const selectedClientLastSeen = selectedId ? clientLastSeen[selectedId] : undefined;
+  const isSelectedClientOnline = Boolean(
+    selectedPresence?.clientes ||
+      selectedConversation?.online ||
+      selectedConversation?.cliente?.online,
+  );
+  const selectedClientLastSeen = selectedId
+    ? clientLastSeen[selectedId] ??
+      getLastSeenValue(selectedConversation) ??
+      getLastClientMessageTime(messages, selectedId)
+    : undefined;
   const shouldShowInstallPrompt = Boolean(deferredInstallPrompt) && !isPwaInstalled;
   const adminPushStatusText =
     pushState === "active"
@@ -636,8 +682,8 @@ export function DashboardClient() {
         ultima_mensagem: getMessagePreview(message),
         ultima_mensagem_id: message.id,
         ultima_mensagem_sender_type: message.sender_type,
-        ultima_mensagem_read: Boolean(message.read || message.read_at),
-        ultima_mensagem_read_at: message.read_at ?? null,
+        ultima_mensagem_read: Boolean(message.read || getMessageReadAt(message)),
+        ultima_mensagem_read_at: getMessageReadAt(message),
       };
 
       setConversations((current) =>
@@ -661,8 +707,8 @@ export function DashboardClient() {
             ultima_interacao: message.created_at,
             ultima_mensagem_id: message.id,
             ultima_mensagem_sender_type: message.sender_type,
-            ultima_mensagem_read: Boolean(message.read || message.read_at),
-            ultima_mensagem_read_at: message.read_at ?? null,
+            ultima_mensagem_read: Boolean(message.read || getMessageReadAt(message)),
+            ultima_mensagem_read_at: getMessageReadAt(message),
           };
         }),
       );
@@ -1316,6 +1362,15 @@ export function DashboardClient() {
 
         setMessages(data);
         patchConversationPreviewFromMessages(conversationId, data);
+        const lastClientMessageTime = getLastClientMessageTime(data, conversationId);
+
+        if (lastClientMessageTime) {
+          setClientLastSeen((current) => ({
+            ...current,
+            [conversationId]: lastClientMessageTime,
+          }));
+        }
+
         if (isActiveThreadVisible()) {
           return markConversationAsRead(token, conversationId, data);
         }
@@ -1481,6 +1536,14 @@ export function DashboardClient() {
           .then((data) => {
             setMessages(data);
             patchConversationPreviewFromMessages(selectedId, data);
+            const lastClientMessageTime = getLastClientMessageTime(data, selectedId);
+
+            if (lastClientMessageTime) {
+              setClientLastSeen((current) => ({
+                ...current,
+                [selectedId]: lastClientMessageTime,
+              }));
+            }
           })
           .catch(() => undefined);
       }
@@ -1500,6 +1563,12 @@ export function DashboardClient() {
         }
       }
       patchConversationPreviewFromMessage(message);
+      if (message.sender_type === "CLIENTE") {
+        setClientLastSeen((current) => ({
+          ...current,
+          [message.conversation_id]: message.created_at,
+        }));
+      }
       reload();
     };
 
@@ -1511,10 +1580,23 @@ export function DashboardClient() {
             ? receipt.message_id
             : receipt.id;
       const readAt =
-        typeof receipt === "number" ? new Date().toISOString() : receipt.read_at;
+        typeof receipt === "number"
+          ? new Date().toISOString()
+          : getMessageReadAt(receipt) ?? new Date().toISOString();
 
       if (!messageId) {
         return;
+      }
+
+      const readMessage = latestMessagesRef.current.find(
+        (message) => message.id === messageId,
+      );
+
+      if (readMessage?.sender_type === "ATENDENTE") {
+        setClientLastSeen((current) => ({
+          ...current,
+          [readMessage.conversation_id]: readAt,
+        }));
       }
 
       Object.entries(conversationPreviewOverridesRef.current).forEach(
@@ -1523,7 +1605,7 @@ export function DashboardClient() {
             conversationPreviewOverridesRef.current[Number(conversationId)] = {
               ...preview,
               ultima_mensagem_read: true,
-              ultima_mensagem_read_at: readAt ?? new Date().toISOString(),
+              ultima_mensagem_read_at: readAt,
             };
           }
         },
@@ -1532,7 +1614,7 @@ export function DashboardClient() {
       setMessages((current) =>
         current.map((message) =>
           message.id === messageId
-            ? { ...message, read: true, read_at: readAt ?? new Date().toISOString() }
+            ? { ...message, read: true, read_at: readAt }
             : message,
         ),
       );
@@ -1551,7 +1633,7 @@ export function DashboardClient() {
           return {
             ...conversation,
             ultima_mensagem_read: true,
-            ultima_mensagem_read_at: readAt ?? new Date().toISOString(),
+            ultima_mensagem_read_at: readAt,
           };
         }),
       );

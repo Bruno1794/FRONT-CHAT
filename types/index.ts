@@ -49,6 +49,9 @@ export interface Message {
   deleted_at?: string | null;
   read?: boolean;
   read_at?: string | null;
+  viewed_at?: string | null;
+  visualized_at?: string | null;
+  visualizado_at?: string | null;
   attachments?: Attachment[];
   reactions?: MessageReaction[];
 }
@@ -58,6 +61,9 @@ export interface MessageReadReceipt {
   message_id?: number;
   read?: boolean;
   read_at?: string;
+  viewed_at?: string | null;
+  visualized_at?: string | null;
+  visualizado_at?: string | null;
   conversation_id?: number;
 }
 
@@ -156,6 +162,10 @@ export interface Cliente {
   cidade?: string;
   vencimento?: string | null;
   status?: string | null;
+  online?: boolean;
+  last_seen?: string | null;
+  ultimo_acesso?: string | null;
+  last_activity?: string | null;
 }
 
 export interface ClientAccessLink {
@@ -182,6 +192,10 @@ export interface Conversation {
   ultima_mensagem_sender_type?: SenderType | null;
   ultima_mensagem_read?: boolean | null;
   ultima_mensagem_read_at?: string | null;
+  online?: boolean;
+  last_seen?: string | null;
+  ultimo_acesso?: string | null;
+  last_activity?: string | null;
   cliente?: Cliente | null;
   unread_count: number;
 }
