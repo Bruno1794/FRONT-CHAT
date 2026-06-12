@@ -92,12 +92,46 @@ export function getChatPopupConfig() {
   return apiFetch<ChatPopupConfig>("/chat-popup");
 }
 
+export function listChatPopupConfigs(token: string) {
+  return apiFetch<ChatPopupConfig[]>("/chat-popup/items", { token });
+}
+
+export function createChatPopupConfig(token: string, payload: ChatPopupConfig) {
+  return apiFetch<ChatPopupConfig>("/chat-popup/items", {
+    method: "POST",
+    token,
+    json: payload,
+  });
+}
+
 export function updateChatPopupConfig(token: string, payload: ChatPopupConfig) {
   return apiFetch<ChatPopupConfig>("/chat-popup", {
     method: "PUT",
     token,
     json: payload,
   });
+}
+
+export function updateChatPopupConfigById(
+  token: string,
+  id: string,
+  payload: ChatPopupConfig,
+) {
+  return apiFetch<ChatPopupConfig>(`/chat-popup/items/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    token,
+    json: payload,
+  });
+}
+
+export function deleteChatPopupConfig(token: string, id: string) {
+  return apiFetch<{ success: boolean }>(
+    `/chat-popup/items/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      token,
+    },
+  );
 }
 
 export function createPixCharge(

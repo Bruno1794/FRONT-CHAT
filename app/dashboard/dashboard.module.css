@@ -404,6 +404,8 @@
 .clientAccessActions button,
 .passwordForm button,
 .popupActions button,
+.popupCardActions button,
+.popupFormHeader button,
 .popupVersionRow button,
 .clearDataForm button,
 .settingsToolbar button,
@@ -429,6 +431,8 @@
 .clientAccessActions button:hover,
 .passwordForm button:hover,
 .popupActions button:hover,
+.popupCardActions button:hover,
+.popupFormHeader button:hover,
 .popupVersionRow button:hover,
 .clearDataForm button:hover,
 .settingsToolbar button:hover,
@@ -604,6 +608,26 @@
   font-size: 1.05rem;
 }
 
+.clientAccessHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.clientAccessHeader > button {
+  flex-shrink: 0;
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 16px;
+  background: #007a4d;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 .clientAccessHeader p {
   max-width: 760px;
   margin: 0;
@@ -622,6 +646,97 @@
 .popupForm {
   display: grid;
   gap: 14px;
+  border-top: 1px solid #e5eee9;
+  padding-top: 14px;
+}
+
+.popupList {
+  display: grid;
+  gap: 10px;
+}
+
+.popupCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid #dfe8e4;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fbfa;
+}
+
+.activePopupCard {
+  border-color: #007a4d;
+  background: #ecf8f3;
+}
+
+.popupCard span,
+.popupFormHeader span {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #e2f7ed;
+  color: #007a4d;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.popupCard strong {
+  display: block;
+  margin-top: 8px;
+  color: #10231d;
+}
+
+.popupCard small {
+  display: block;
+  margin-top: 4px;
+  color: #64736e;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.popupCard p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 8px 0 0;
+  color: #5f6b66;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.popupCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.popupCardActions button,
+.popupFormHeader button {
+  min-height: 34px;
+  padding: 0 13px;
+}
+
+.popupCardActions .dangerButton {
+  background: #b42318;
+}
+
+.popupFormHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.popupFormHeader h3 {
+  margin: 7px 0 0;
+  color: #10231d;
+  font-size: 1rem;
 }
 
 .popupFormGrid {
@@ -694,6 +809,8 @@
 
 .passwordForm button,
 .popupActions button,
+.popupCardActions button,
+.popupFormHeader button,
 .popupVersionRow button,
 .clearDataForm button {
   min-height: 40px;
@@ -711,6 +828,8 @@
 .clientAccessForm button:disabled,
 .passwordForm button:disabled,
 .popupActions button:disabled,
+.popupCardActions button:disabled,
+.popupFormHeader button:disabled,
 .popupVersionRow button:disabled,
 .clearDataForm button:disabled {
   cursor: not-allowed;
@@ -2241,13 +2360,27 @@
   }
 
   .settingsHeader,
+  .clientAccessHeader,
+  .popupCard,
   .shortcutCard {
     grid-template-columns: 1fr;
   }
 
   .settingsHeader,
+  .clientAccessHeader,
+  .popupFormHeader,
   .shortcutActions {
     flex-direction: column;
+  }
+
+  .popupCardActions,
+  .popupFormHeader {
+    align-items: stretch;
+  }
+
+  .popupCardActions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .shortcutTypeGrid {

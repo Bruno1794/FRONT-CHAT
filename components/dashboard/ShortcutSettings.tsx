@@ -5,12 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   changePassword,
   clearSystemData,
+  createChatPopupConfig,
   createShortcut,
+  deleteChatPopupConfig,
   deleteShortcut,
-  getChatPopupConfig,
   getClientAccessLink,
   getShortcuts,
-  updateChatPopupConfig,
+  listChatPopupConfigs,
+  updateChatPopupConfigById,
   updateShortcut,
 } from "@/services/chatApi";
 import type { ChatPopupConfig, ClientAccessLink, Shortcut, User } from "@/types";
@@ -120,7 +122,9 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
   const [isClearingData, setIsClearingData] = useState(false);
   const [clearFeedback, setClearFeedback] = useState("");
   const [clearError, setClearError] = useState("");
+  const [popups, setPopups] = useState<ChatPopupConfig[]>([]);
   const [popupForm, setPopupForm] = useState<ChatPopupConfig>(emptyPopupForm);
+  const [editingPopupId, setEditingPopupId] = useState<string | null>(null);
   const [isPopupLoading, setIsPopupLoading] = useState(true);
   const [isPopupSaving, setIsPopupSaving] = useState(false);
   const [popupFeedback, setPopupFeedback] = useState("");
@@ -187,6 +191,30 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     }
   }, [search, token]);
 
+  const loadPopups = useCallback(async (selectActive = false) => {
+    if (!token) {
+      return;
+    }
+
+    setIsPopupLoading(true);
+    setPopupError("");
+
+    try {
+      const data = await listChatPopupConfigs(token);
+      setPopups(data);
+
+      if (selectActive) {
+        const activePopup = data.find((popup) => popup.enabled);
+        setPopupForm(activePopup ?? emptyPopupForm);
+        setEditingPopupId(activePopup?.id ?? null);
+      }
+    } catch (err) {
+      setPopupError(err instanceof Error ? err.message : "Falha ao carregar popups.");
+    } finally {
+      setIsPopupLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void loadShortcuts();
@@ -196,31 +224,19 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
   }, [loadShortcuts]);
 
   useEffect(() => {
-    let isMounted = true;
+    let timeoutId: number;
 
-    getChatPopupConfig()
-      .then((config) => {
-        if (isMounted) {
-          setPopupForm(config);
-        }
-      })
-      .catch((err) => {
-        if (isMounted) {
-          setPopupError(
-            err instanceof Error ? err.message : "Falha ao carregar popup.",
-          );
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsPopupLoading(false);
-        }
-      });
+    if (!token) {
+      timeoutId = window.setTimeout(() => setIsPopupLoading(false), 0);
+      return () => window.clearTimeout(timeoutId);
+    }
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    timeoutId = window.setTimeout(() => {
+      void loadPopups(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadPopups, token]);
 
   const openCreateModal = () => {
     setEditingShortcut(null);
@@ -512,6 +528,101 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     }
   };
 
+  const buildPopupPayload = (): ChatPopupConfig => ({
+    ...popupForm,
+    id: popupForm.id.trim() || `popup-${Date.now()}`,
+    title: popupForm.title.trim(),
+    message: popupForm.message.trim(),
+    imageUrl: popupForm.imageUrl.trim(),
+    imageAlt: popupForm.imageAlt.trim() || "Imagem do aviso",
+    ctaLabel: popupForm.ctaLabel.trim(),
+    ctaUrl: popupForm.ctaUrl.trim(),
+    dismissHours: Math.max(0, Number(popupForm.dismissHours) || 0),
+    delayMs: Math.max(0, Number(popupForm.delayMs) || 0),
+  });
+
+  const handleNewPopup = () => {
+    setEditingPopupId(null);
+    setPopupForm({
+      ...emptyPopupForm,
+      id: `popup-${Date.now()}`,
+    });
+    setPopupFeedback("");
+    setPopupError("");
+  };
+
+  const handleEditPopup = (popup: ChatPopupConfig) => {
+    setEditingPopupId(popup.id);
+    setPopupForm(popup);
+    setPopupFeedback("");
+    setPopupError("");
+  };
+
+  const handleDeletePopup = async (popup: ChatPopupConfig) => {
+    if (!token || isPopupSaving) {
+      return;
+    }
+
+    if (!window.confirm(`Excluir o popup "${popup.title || popup.id}"?`)) {
+      return;
+    }
+
+    setIsPopupSaving(true);
+    setPopupFeedback("");
+    setPopupError("");
+
+    try {
+      await deleteChatPopupConfig(token, popup.id);
+      setPopupFeedback("Popup excluido.");
+
+      if (editingPopupId === popup.id) {
+        handleNewPopup();
+      }
+
+      await loadPopups();
+    } catch (err) {
+      setPopupError(err instanceof Error ? err.message : "Falha ao excluir popup.");
+    } finally {
+      setIsPopupSaving(false);
+    }
+  };
+
+  const handleSavePopupFromCard = async (popup: ChatPopupConfig) => {
+    if (!token || isPopupSaving) {
+      return;
+    }
+
+    setIsPopupSaving(true);
+    setPopupFeedback("");
+    setPopupError("");
+
+    try {
+      const savedConfig = await updateChatPopupConfigById(token, popup.id, {
+        ...popup,
+        id: popup.id.trim(),
+        title: popup.title.trim(),
+        message: popup.message.trim(),
+        imageUrl: popup.imageUrl.trim(),
+        imageAlt: popup.imageAlt.trim() || "Imagem do aviso",
+        ctaLabel: popup.ctaLabel.trim(),
+        ctaUrl: popup.ctaUrl.trim(),
+        dismissHours: Math.max(0, Number(popup.dismissHours) || 0),
+        delayMs: Math.max(0, Number(popup.delayMs) || 0),
+      });
+
+      setPopupFeedback(savedConfig.enabled ? "Popup ativado." : "Popup desativado.");
+      await loadPopups();
+
+      if (editingPopupId === popup.id) {
+        setPopupForm(savedConfig);
+      }
+    } catch (err) {
+      setPopupError(err instanceof Error ? err.message : "Falha ao atualizar popup.");
+    } finally {
+      setIsPopupSaving(false);
+    }
+  };
+
   const handleSavePopup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -535,21 +646,15 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     setIsPopupSaving(true);
 
     try {
-      const savedConfig = await updateChatPopupConfig(token, {
-        ...popupForm,
-        id: popupForm.id.trim() || `popup-${Date.now()}`,
-        title: popupForm.title.trim(),
-        message: popupForm.message.trim(),
-        imageUrl: popupForm.imageUrl.trim(),
-        imageAlt: popupForm.imageAlt.trim() || "Imagem do aviso",
-        ctaLabel: popupForm.ctaLabel.trim(),
-        ctaUrl: popupForm.ctaUrl.trim(),
-        dismissHours: Math.max(0, Number(popupForm.dismissHours) || 0),
-        delayMs: Math.max(0, Number(popupForm.delayMs) || 0),
-      });
+      const payload = buildPopupPayload();
+      const savedConfig = editingPopupId
+        ? await updateChatPopupConfigById(token, editingPopupId, payload)
+        : await createChatPopupConfig(token, payload);
 
       setPopupForm(savedConfig);
+      setEditingPopupId(savedConfig.id);
       setPopupFeedback("Popup salvo. Novos clientes ja recebem esta configuracao.");
+      await loadPopups();
     } catch (err) {
       setPopupError(err instanceof Error ? err.message : "Falha ao salvar popup.");
     } finally {
@@ -593,17 +698,78 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
           <div className={styles.clientAccessHeader}>
             <div>
               <span>Popup do chat</span>
-              <h2>Aviso inicial para o cliente</h2>
+              <h2>Popups cadastrados</h2>
               <p>
-                Configure o conteudo e por quanto tempo o aviso fica oculto
-                depois que o cliente fechar.
+                Cadastre varios avisos e deixe ativo apenas o que deve aparecer
+                para o cliente ao abrir o chat.
               </p>
             </div>
+            <button type="button" onClick={handleNewPopup}>
+              Novo popup
+            </button>
           </div>
 
           {isPopupLoading ? <p className={styles.state}>Carregando popup...</p> : null}
 
+          {!isPopupLoading && popups.length === 0 ? (
+            <p className={styles.state}>Nenhum popup cadastrado.</p>
+          ) : null}
+
+          {popups.length > 0 ? (
+            <div className={styles.popupList}>
+              {popups.map((popup) => (
+                <article
+                  className={`${styles.popupCard} ${
+                    editingPopupId === popup.id ? styles.activePopupCard : ""
+                  }`}
+                  key={popup.id}
+                >
+                  <div>
+                    <span>{popup.enabled ? "Ativo" : "Inativo"}</span>
+                    <strong>{popup.title || "Popup sem titulo"}</strong>
+                    <small>Versao: {popup.id}</small>
+                    <p>{popup.message || popup.imageUrl || "Sem conteudo configurado."}</p>
+                  </div>
+                  <div className={styles.popupCardActions}>
+                    <button type="button" onClick={() => handleEditPopup(popup)}>
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleSavePopupFromCard({
+                          ...popup,
+                          enabled: !popup.enabled,
+                        })
+                      }
+                    >
+                      {popup.enabled ? "Desativar" : "Ativar"}
+                    </button>
+                    <button
+                      className={styles.dangerButton}
+                      type="button"
+                      onClick={() => void handleDeletePopup(popup)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
+
           <form className={styles.popupForm} onSubmit={handleSavePopup}>
+            <div className={styles.popupFormHeader}>
+              <div>
+                <span>{editingPopupId ? "Editando" : "Novo cadastro"}</span>
+                <h3>{editingPopupId ? popupForm.title || popupForm.id : "Criar popup"}</h3>
+              </div>
+              {editingPopupId ? (
+                <button type="button" onClick={handleNewPopup}>
+                  Cancelar edicao
+                </button>
+              ) : null}
+            </div>
             <div className={styles.formChecks}>
               <label>
                 <input

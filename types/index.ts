@@ -133,6 +133,8 @@ export interface ChatPopupConfig {
   allowMarkAsSeen: boolean;
   closeOnBackdrop: boolean;
   requireConversation: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PixCharge {
