@@ -194,12 +194,14 @@ export function ChatOpeningPopup({ isConversationStarted }: ChatOpeningPopupProp
         onClick={(event) => event.stopPropagation()}
       >
         {config.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            className={styles.image}
-            src={resolvePopupImageUrl(config.imageUrl)}
-            alt={config.imageAlt}
-          />
+          <div className={styles.imageFrame}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className={styles.image}
+              src={resolvePopupImageUrl(config.imageUrl)}
+              alt={config.imageAlt}
+            />
+          </div>
         ) : null}
         <div className={styles.content}>
           <header className={styles.header}>
