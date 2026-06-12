@@ -25,6 +25,25 @@
   transition: transform 160ms ease;
 }
 
+.mobileMenuBadge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  padding: 0 5px;
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 0.64rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 8px 18px rgba(225, 29, 72, 0.24);
+}
+
 .brand {
   display: flex;
   flex-direction: column;
@@ -86,7 +105,8 @@
     transform 160ms ease;
 }
 
-.nav span {
+.navIcon {
+  position: relative;
   display: grid;
   width: 34px;
   height: 34px;
@@ -100,6 +120,25 @@
     background 160ms ease,
     color 160ms ease,
     transform 160ms ease;
+}
+
+.navBadge {
+  position: absolute;
+  top: -7px;
+  right: -8px;
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  padding: 0 5px;
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 8px 18px rgba(225, 29, 72, 0.24);
 }
 
 .nav small {
@@ -123,8 +162,8 @@
   transform: translateY(-1px);
 }
 
-.nav a:hover span,
-.activeNav span {
+.nav a:hover .navIcon,
+.activeNav .navIcon {
   background: #ffffff;
   transform: scale(1.04);
 }
@@ -223,6 +262,11 @@
     border-bottom: 0;
     padding: 10px;
     text-align: left;
+  }
+
+  .navBadge {
+    top: -4px;
+    right: -5px;
   }
 
   .nav small {

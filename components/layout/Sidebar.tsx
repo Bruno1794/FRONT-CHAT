@@ -15,12 +15,17 @@ const navItems = [
 
 type Props = {
   hideMobileMenuButton?: boolean;
+  pendingChatsCount?: number;
 };
 
-export function Sidebar({ hideMobileMenuButton = false }: Props) {
+export function Sidebar({
+  hideMobileMenuButton = false,
+  pendingChatsCount = 0,
+}: Props) {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") ?? "dashboard";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pendingChatsLabel = pendingChatsCount > 99 ? "99+" : String(pendingChatsCount);
 
   return (
     <>
@@ -38,6 +43,9 @@ export function Sidebar({ hideMobileMenuButton = false }: Props) {
           <path d="M4 12h16" />
           <path d="M4 17h16" />
         </svg>
+        {pendingChatsCount > 0 ? (
+          <span className={styles.mobileMenuBadge}>{pendingChatsLabel}</span>
+        ) : null}
       </button>
       {isMenuOpen ? (
         <button
@@ -59,17 +67,31 @@ export function Sidebar({ hideMobileMenuButton = false }: Props) {
           <span>ATENDIMENTO</span>
         </Link>
         <nav className={styles.nav} aria-label="Navegacao principal">
-          {navItems.map((item) => (
-            <Link
-              className={activeTab === item.tab ? styles.activeNav : undefined}
-              key={item.label}
-              href={item.href}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <span>{item.icon}</span>
-              <small>{item.label}</small>
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const shouldShowBadge = item.tab === "chats" && pendingChatsCount > 0;
+
+            return (
+              <Link
+                className={activeTab === item.tab ? styles.activeNav : undefined}
+                key={item.label}
+                href={item.href}
+                aria-label={
+                  shouldShowBadge
+                    ? `${item.label}, ${pendingChatsCount} atendimentos pendentes`
+                    : item.label
+                }
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span className={styles.navIcon}>
+                  {item.icon}
+                  {shouldShowBadge ? (
+                    <strong className={styles.navBadge}>{pendingChatsLabel}</strong>
+                  ) : null}
+                </span>
+                <small>{item.label}</small>
+              </Link>
+            );
+          })}
         </nav>
       </aside>
     </>

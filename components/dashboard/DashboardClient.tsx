@@ -526,6 +526,10 @@ export function DashboardClient() {
       getLastClientMessageTime(messages, selectedId)
     : undefined;
   const shouldShowInstallPrompt = Boolean(deferredInstallPrompt) && !isPwaInstalled;
+  const pendingChatsCount = conversations.reduce(
+    (total, conversation) => total + (conversation.unread_count ?? 0),
+    0,
+  );
   const onlineAdminUsersCount = users.filter(
     (item) => item.role === "ADMIN" && item.online,
   ).length;
@@ -2260,7 +2264,10 @@ export function DashboardClient() {
 
   return (
     <main className={styles.shell}>
-      <Sidebar hideMobileMenuButton={activeTab === "chats" && isMobileThreadOpen} />
+      <Sidebar
+        hideMobileMenuButton={activeTab === "chats" && isMobileThreadOpen}
+        pendingChatsCount={pendingChatsCount}
+      />
       <section
         className={styles.workspace}
         onClick={unlockNotificationSound}
@@ -2280,12 +2287,7 @@ export function DashboardClient() {
                 <small>Conversas carregadas</small>
               </article>
               <article>
-                <strong>
-                  {conversations.reduce(
-                    (total, conversation) => total + (conversation.unread_count ?? 0),
-                    0,
-                  )}
-                </strong>
+                <strong>{pendingChatsCount}</strong>
                 <small>Mensagens pendentes</small>
               </article>
               <article>
