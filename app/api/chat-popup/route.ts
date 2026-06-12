@@ -6,7 +6,21 @@ import type { ChatPopupConfig } from "@/types";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const CONFIG_DIR = path.join(process.cwd(), ".data");
+function resolveConfigDir() {
+  const configuredDir = process.env.CHAT_POPUP_CONFIG_DIR?.trim();
+
+  if (!configuredDir) {
+    return path.join(/* turbopackIgnore: true */ process.cwd(), ".data");
+  }
+
+  if (path.isAbsolute(configuredDir)) {
+    return configuredDir;
+  }
+
+  return path.join(/* turbopackIgnore: true */ process.cwd(), configuredDir);
+}
+
+const CONFIG_DIR = resolveConfigDir();
 const CONFIG_FILE = path.join(CONFIG_DIR, "chat-popup.json");
 
 function readBoolean(value: string | undefined, fallback: boolean) {
@@ -102,6 +116,10 @@ async function readConfig() {
   }
 }
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Erro desconhecido.";
+}
+
 async function verifyAdmin(request: Request) {
   const authorization = request.headers.get("authorization");
 
@@ -145,8 +163,17 @@ export async function PUT(request: Request) {
 
   const config = sanitizeConfig(body);
 
-  await mkdir(CONFIG_DIR, { recursive: true });
-  await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), "utf8");
+  try {
+    await mkdir(CONFIG_DIR, { recursive: true });
+    await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), "utf8");
+  } catch (error) {
+    return Response.json(
+      {
+        message: `Nao foi possivel salvar o popup em ${CONFIG_FILE}. Confira se o usuario do PM2 tem permissao de escrita ou configure CHAT_POPUP_CONFIG_DIR. Detalhe: ${getErrorMessage(error)}`,
+      },
+      { status: 500 },
+    );
+  }
 
   return Response.json(config, {
     headers: {
