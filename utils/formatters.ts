@@ -1,7 +1,10 @@
+const BRASILIA_TIME_ZONE = "America/Sao_Paulo";
+
 export const formatTime = (value: string) =>
   new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: BRASILIA_TIME_ZONE,
   }).format(new Date(value));
 
 export const getDateKey = (value: string) =>
@@ -9,6 +12,7 @@ export const getDateKey = (value: string) =>
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    timeZone: BRASILIA_TIME_ZONE,
   }).format(new Date(value));
 
 export const formatMessageDateLabel = (value: string) => {
@@ -34,6 +38,7 @@ export const formatMessageDateLabel = (value: string) => {
     day: "2-digit",
     month: "long",
     year: "numeric",
+    timeZone: BRASILIA_TIME_ZONE,
   }).format(date);
 };
 
@@ -63,7 +68,7 @@ export const formatLastSeen = (value?: string | null) => {
   }
 
   const today = new Date();
-  const sameDay = date.toDateString() === today.toDateString();
+  const sameDay = getDateKey(value) === getDateKey(today.toISOString());
 
   if (sameDay) {
     return `visto hoje ${formatTime(value)}`;
@@ -72,6 +77,7 @@ export const formatLastSeen = (value?: string | null) => {
   const dateLabel = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
+    timeZone: BRASILIA_TIME_ZONE,
   }).format(date);
 
   return `visto ${dateLabel} ${formatTime(value)}`;
