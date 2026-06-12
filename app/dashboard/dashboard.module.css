@@ -755,6 +755,7 @@
 }
 
 .popupFormGrid label:first-child,
+.popupImageField,
 .popupFormGrid label:nth-child(3) {
   grid-column: 1 / -1;
 }
@@ -764,6 +765,48 @@
   font-size: 0.74rem;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.popupImageField {
+  display: grid;
+  gap: 8px;
+  border: 1px dashed #c8d9d2;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fbfa;
+}
+
+.popupImageField > span {
+  color: #33403c;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.popupImagePreview {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.popupImagePreview img {
+  width: 100%;
+  max-height: 120px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #eef4f1;
+}
+
+.popupImagePreview button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 13px;
+  background: #eef4f1;
+  color: #173b31;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
 .popupVersionRow {
@@ -965,6 +1008,12 @@
 .clientAccessLinkBox input {
   min-height: 40px;
   padding: 0 12px;
+}
+
+.popupImageField input {
+  width: 100%;
+  color: #33403c;
+  font-size: 0.82rem;
 }
 
 .popupFormGrid textarea {
@@ -2380,6 +2429,10 @@
 
   .popupCardActions {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .popupImagePreview {
     grid-template-columns: 1fr;
   }
 

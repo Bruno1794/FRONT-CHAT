@@ -14,6 +14,7 @@ import {
   listChatPopupConfigs,
   updateChatPopupConfigById,
   updateShortcut,
+  uploadFile,
 } from "@/services/chatApi";
 import type { ChatPopupConfig, ClientAccessLink, Shortcut, User } from "@/types";
 import {
@@ -127,6 +128,7 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
   const [editingPopupId, setEditingPopupId] = useState<string | null>(null);
   const [isPopupLoading, setIsPopupLoading] = useState(true);
   const [isPopupSaving, setIsPopupSaving] = useState(false);
+  const [isPopupImageUploading, setIsPopupImageUploading] = useState(false);
   const [popupFeedback, setPopupFeedback] = useState("");
   const [popupError, setPopupError] = useState("");
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>(
@@ -623,6 +625,39 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     }
   };
 
+  const handlePopupImageUpload = async (file: File | undefined) => {
+    if (!file || !token || isPopupImageUploading) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setPopupError("Selecione um arquivo de imagem.");
+      return;
+    }
+
+    setIsPopupImageUploading(true);
+    setPopupFeedback("");
+    setPopupError("");
+
+    try {
+      const uploadedFile = await uploadFile(file, token);
+
+      setPopupForm((current) => ({
+        ...current,
+        imageUrl: uploadedFile.url || current.imageUrl,
+        imageAlt:
+          current.imageAlt && current.imageAlt !== "Imagem do aviso"
+            ? current.imageAlt
+            : uploadedFile.original_name || file.name || "Imagem do aviso",
+      }));
+      setPopupFeedback("Imagem enviada. Salve o popup para aplicar.");
+    } catch (err) {
+      setPopupError(err instanceof Error ? err.message : "Falha ao enviar imagem.");
+    } finally {
+      setIsPopupImageUploading(false);
+    }
+  };
+
   const handleSavePopup = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -885,19 +920,40 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
                 />
               </label>
 
-              <label>
-                URL da imagem
+              <div className={styles.popupImageField}>
+                <span>Imagem do popup</span>
+                {popupForm.imageUrl ? (
+                  <div className={styles.popupImagePreview}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={popupForm.imageUrl} alt={popupForm.imageAlt} />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPopupForm((current) => ({
+                          ...current,
+                          imageUrl: "",
+                        }))
+                      }
+                    >
+                      Remover imagem
+                    </button>
+                  </div>
+                ) : null}
                 <input
-                  placeholder="https://..."
-                  value={popupForm.imageUrl}
-                  onChange={(event) =>
-                    setPopupForm((current) => ({
-                      ...current,
-                      imageUrl: event.target.value,
-                    }))
-                  }
+                  accept="image/*"
+                  disabled={isPopupImageUploading}
+                  type="file"
+                  onChange={(event) => {
+                    void handlePopupImageUpload(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
                 />
-              </label>
+                <small>
+                  {isPopupImageUploading
+                    ? "Enviando imagem..."
+                    : "Envie uma imagem do computador para aparecer no popup do cliente."}
+                </small>
+              </div>
 
               <label>
                 Texto alternativo da imagem
