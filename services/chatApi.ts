@@ -46,6 +46,10 @@ export function getMe(token: string) {
   return apiFetch<User>("/auth/me", { token });
 }
 
+export function getUsers(token: string) {
+  return apiFetch<User[]>("/users", { token });
+}
+
 export function changePassword(
   token: string,
   payload: { senha_atual: string; nova_senha: string },

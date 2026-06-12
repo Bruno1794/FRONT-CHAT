@@ -23,6 +23,7 @@ import {
   getConversations,
   getMessages,
   getPushConfig,
+  getUsers,
   markMessageAsRead,
   reactToMessage,
   reopenConversation,
@@ -96,6 +97,13 @@ type PushAlertApi = {
   subs_id?: string;
   forceSubscribe?: () => void;
   getSubsInfo?: () => PushAlertInfo;
+};
+
+type UserPresencePayload = {
+  id?: number;
+  user_id?: number;
+  online?: boolean;
+  ultimo_acesso?: string;
 };
 
 declare global {
@@ -424,6 +432,9 @@ export function DashboardClient() {
   const activeTab = activeTabParam ?? "dashboard";
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isUsersLoading, setIsUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clientesSearch, setClientesSearch] = useState("");
@@ -517,6 +528,9 @@ export function DashboardClient() {
       getLastClientMessageTime(messages, selectedId)
     : undefined;
   const shouldShowInstallPrompt = Boolean(deferredInstallPrompt) && !isPwaInstalled;
+  const onlineAdminUsersCount = users.filter(
+    (item) => item.role === "ADMIN" && item.online,
+  ).length;
   const adminPushStatusText =
     pushState === "active"
       ? "WebPush ativo neste navegador."
@@ -648,6 +662,40 @@ export function DashboardClient() {
       .slice(0, 2)
       .toUpperCase();
   };
+
+  const patchUserPresence = useCallback(
+    (payload: UserPresencePayload, online: boolean) => {
+      const userId = Number(payload.user_id ?? payload.id);
+
+      if (!userId) {
+        return;
+      }
+
+      const lastSeen = payload.ultimo_acesso ?? new Date().toISOString();
+
+      setUsers((current) =>
+        current.map((item) =>
+          item.id === userId
+            ? {
+                ...item,
+                online,
+                ultimo_acesso: lastSeen,
+              }
+            : item,
+        ),
+      );
+      setUser((current) =>
+        current?.id === userId
+          ? {
+              ...current,
+              online,
+              ultimo_acesso: lastSeen,
+            }
+          : current,
+      );
+    },
+    [],
+  );
 
   const getMessagePreview = useCallback((message: Message) => {
     if (message.deleted_at) {
@@ -895,6 +943,24 @@ export function DashboardClient() {
     }
   }, [clientesSearch, isClienteAtivo, token]);
 
+  const loadUsers = useCallback(async () => {
+    if (!token || user?.role !== "ADMIN") {
+      return;
+    }
+
+    setIsUsersLoading(true);
+    setUsersError("");
+
+    try {
+      const data = await getUsers(token);
+      setUsers(data);
+    } catch (err) {
+      setUsersError(err instanceof Error ? err.message : "Falha ao carregar usuarios.");
+    } finally {
+      setIsUsersLoading(false);
+    }
+  }, [token, user?.role]);
+
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
@@ -1102,6 +1168,58 @@ export function DashboardClient() {
 
     return () => window.clearTimeout(timeoutId);
   }, [activeTab, loadClientes, token]);
+
+  useEffect(() => {
+    if (activeTab !== "dashboard" || !token || user?.role !== "ADMIN") {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadUsers();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeTab, loadUsers, token, user?.role]);
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+
+    const handleUserOnline = (payload: UserPresencePayload) => {
+      patchUserPresence(payload, true);
+    };
+    const handleUserOffline = (payload: UserPresencePayload) => {
+      patchUserPresence(payload, false);
+    };
+    const handleCurrentUserOnline = () => {
+      const lastSeen = new Date().toISOString();
+
+      setUser((current) =>
+        current
+          ? {
+              ...current,
+              online: true,
+              ultimo_acesso: lastSeen,
+            }
+          : current,
+      );
+    };
+
+    if (socket.connected) {
+      handleCurrentUserOnline();
+    }
+
+    socket.on("connect", handleCurrentUserOnline);
+    socket.on("user_online", handleUserOnline);
+    socket.on("user_offline", handleUserOffline);
+
+    return () => {
+      socket.off("connect", handleCurrentUserOnline);
+      socket.off("user_online", handleUserOnline);
+      socket.off("user_offline", handleUserOffline);
+    };
+  }, [patchUserPresence, socket]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -2166,7 +2284,64 @@ export function DashboardClient() {
                 <strong>{user?.nome ?? "Atendente"}</strong>
                 <small>Usuario conectado</small>
               </article>
+              <article>
+                <strong>{user?.online ? "Online" : formatLastSeen(user?.ultimo_acesso)}</strong>
+                <small>Ultimo visto do usuario</small>
+              </article>
+              {user?.role === "ADMIN" ? (
+                <article>
+                  <strong>{onlineAdminUsersCount}</strong>
+                  <small>Administradores online</small>
+                </article>
+              ) : null}
             </div>
+            {user?.role === "ADMIN" ? (
+              <section className={styles.usersStatusPanel}>
+                <header className={styles.usersStatusHeader}>
+                  <div>
+                    <span>Usuarios</span>
+                    <h2>Status da equipe</h2>
+                    <p>Veja quem esta online e o ultimo acesso dos administradores.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isUsersLoading}
+                    onClick={() => void loadUsers()}
+                  >
+                    {isUsersLoading ? "Atualizando..." : "Atualizar"}
+                  </button>
+                </header>
+
+                {usersError ? <p className={styles.error}>{usersError}</p> : null}
+                {isUsersLoading && users.length === 0 ? (
+                  <p className={styles.state}>Carregando usuarios...</p>
+                ) : null}
+
+                <div className={styles.usersStatusList}>
+                  {users.map((item) => (
+                    <article className={styles.userStatusRow} key={item.id}>
+                      <span className={styles.avatar}>{getInitials(item.nome)}</span>
+                      <div>
+                        <strong>{item.nome}</strong>
+                        <small>{item.role === "ADMIN" ? "Administrador" : "Atendente"}</small>
+                      </div>
+                      <span
+                        className={
+                          item.online
+                            ? styles.userStatusOnline
+                            : styles.userStatusOffline
+                        }
+                      >
+                        {item.online ? "Online" : formatLastSeen(item.ultimo_acesso)}
+                      </span>
+                    </article>
+                  ))}
+                  {!isUsersLoading && users.length === 0 ? (
+                    <p className={styles.state}>Nenhum usuario encontrado.</p>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
           </div>
         ) : null}
 
