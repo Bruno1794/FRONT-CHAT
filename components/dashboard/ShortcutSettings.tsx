@@ -2,6 +2,7 @@
 
 import { FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getApiUrl } from "@/services/api";
 import {
   changePassword,
   clearSystemData,
@@ -97,6 +98,18 @@ const emptyPopupForm: ChatPopupConfig = {
   closeOnBackdrop: true,
   requireConversation: false,
 };
+
+function resolvePopupImageUrl(url: string) {
+  if (!url) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(url) || url.startsWith("data:")) {
+    return url;
+  }
+
+  return `${getApiUrl()}${url.startsWith("/") ? url : `/${url}`}`;
+}
 
 export function ShortcutSettings({ token, user, notificationContent }: Props) {
   const router = useRouter();
@@ -644,7 +657,7 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
 
       setPopupForm((current) => ({
         ...current,
-        imageUrl: uploadedFile.url || current.imageUrl,
+        imageUrl: resolvePopupImageUrl(uploadedFile.url || current.imageUrl),
         imageAlt:
           current.imageAlt && current.imageAlt !== "Imagem do aviso"
             ? current.imageAlt
@@ -925,7 +938,10 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
                 {popupForm.imageUrl ? (
                   <div className={styles.popupImagePreview}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={popupForm.imageUrl} alt={popupForm.imageAlt} />
+                    <img
+                      src={resolvePopupImageUrl(popupForm.imageUrl)}
+                      alt={popupForm.imageAlt}
+                    />
                     <button
                       type="button"
                       onClick={() =>

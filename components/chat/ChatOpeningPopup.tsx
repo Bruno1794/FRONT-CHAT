@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import styles from "@/components/chat/ChatOpeningPopup.module.css";
+import { getApiUrl } from "@/services/api";
 import { getChatPopupConfig } from "@/services/chatApi";
 import type { ChatPopupConfig } from "@/types";
 
@@ -70,6 +71,18 @@ function savePopupDismiss(storageKey: string, dontShowAgain: boolean) {
   };
 
   localStorage.setItem(storageKey, JSON.stringify(nextState));
+}
+
+function resolvePopupImageUrl(url: string) {
+  if (!url) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(url) || url.startsWith("data:")) {
+    return url;
+  }
+
+  return `${getApiUrl()}${url.startsWith("/") ? url : `/${url}`}`;
 }
 
 function buildPopupConfig(): ChatPopupConfig {
@@ -184,7 +197,7 @@ export function ChatOpeningPopup({ isConversationStarted }: ChatOpeningPopupProp
           // eslint-disable-next-line @next/next/no-img-element
           <img
             className={styles.image}
-            src={config.imageUrl}
+            src={resolvePopupImageUrl(config.imageUrl)}
             alt={config.imageAlt}
           />
         ) : null}
