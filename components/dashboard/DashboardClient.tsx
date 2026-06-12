@@ -322,9 +322,6 @@ function waitForPushAlertSubscription() {
 
 function getLastSeenValue(conversation?: Conversation | null) {
   return (
-    conversation?.last_seen ||
-    conversation?.ultimo_acesso ||
-    conversation?.last_activity ||
     conversation?.cliente?.last_seen ||
     conversation?.cliente?.ultimo_acesso ||
     conversation?.cliente?.last_activity
@@ -493,6 +490,7 @@ export function DashboardClient() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const latestMessagesRef = useRef<Message[]>(messages);
   const unreadCountsRef = useRef<Record<number, number>>({});
+  const conversationPresenceRef = useRef<Record<number, ConversationPresence>>({});
   const conversationPreviewOverridesRef = useRef<
     Record<
       number,
@@ -964,6 +962,10 @@ export function DashboardClient() {
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
+
+  useEffect(() => {
+    conversationPresenceRef.current = conversationPresence;
+  }, [conversationPresence]);
 
   useEffect(() => {
     if (
@@ -1783,12 +1785,18 @@ export function DashboardClient() {
     };
 
     const handleConversationPresence = (presence: ConversationPresence) => {
-      setConversationPresence((current) => ({
-        ...current,
-        [presence.conversation_id]: presence,
-      }));
+      const previousPresence =
+        conversationPresenceRef.current[presence.conversation_id];
+      const didClientLeave =
+        Boolean(previousPresence?.clientes) && presence.clientes === 0;
 
-      if (presence.clientes === 0) {
+      conversationPresenceRef.current = {
+        ...conversationPresenceRef.current,
+        [presence.conversation_id]: presence,
+      };
+      setConversationPresence(conversationPresenceRef.current);
+
+      if (didClientLeave) {
         setClientLastSeen((current) => ({
           ...current,
           [presence.conversation_id]: presence.updated_at,
