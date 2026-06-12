@@ -3,6 +3,7 @@ import type {
   Attachment,
   AuthResponse,
   BroadcastNoticeResult,
+  ChatPopupConfig,
   Cliente,
   ClientAccessLink,
   ClearDataResult,
@@ -82,6 +83,58 @@ export function sendBroadcastNotice(
 ) {
   return apiFetch<BroadcastNoticeResult>("/broadcasts/notice", {
     method: "POST",
+    token,
+    json: payload,
+  });
+}
+
+async function localJsonFetch<T>(
+  path: string,
+  {
+    token,
+    json,
+    ...options
+  }: RequestInit & { token?: string; json?: unknown } = {},
+) {
+  const headers = new Headers(options.headers);
+
+  if (json !== undefined) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(path, {
+    ...options,
+    body: json !== undefined ? JSON.stringify(json) : options.body,
+    headers,
+  });
+
+  if (!response.ok) {
+    let message = `Request failed with status ${response.status}`;
+
+    try {
+      const errorBody = (await response.json()) as { message?: string };
+      message = errorBody.message ?? message;
+    } catch {
+      // Keep default message.
+    }
+
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export function getChatPopupConfig() {
+  return localJsonFetch<ChatPopupConfig>("/api/chat-popup");
+}
+
+export function updateChatPopupConfig(token: string, payload: ChatPopupConfig) {
+  return localJsonFetch<ChatPopupConfig>("/api/chat-popup", {
+    method: "PUT",
     token,
     json: payload,
   });

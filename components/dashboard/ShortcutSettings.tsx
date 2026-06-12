@@ -7,11 +7,13 @@ import {
   clearSystemData,
   createShortcut,
   deleteShortcut,
+  getChatPopupConfig,
   getClientAccessLink,
   getShortcuts,
+  updateChatPopupConfig,
   updateShortcut,
 } from "@/services/chatApi";
-import type { ClientAccessLink, Shortcut, User } from "@/types";
+import type { ChatPopupConfig, ClientAccessLink, Shortcut, User } from "@/types";
 import {
   buildCardMessage,
   getRichMessagePreview,
@@ -47,7 +49,13 @@ type PasswordFormState = {
   confirmPassword: string;
 };
 
-type SettingsTab = "shortcuts" | "access" | "account" | "notifications" | "maintenance";
+type SettingsTab =
+  | "shortcuts"
+  | "access"
+  | "popup"
+  | "account"
+  | "notifications"
+  | "maintenance";
 
 const emptyForm: FormState = {
   shortcut: "",
@@ -69,6 +77,22 @@ const emptyPasswordForm: PasswordFormState = {
   currentPassword: "",
   newPassword: "",
   confirmPassword: "",
+};
+
+const emptyPopupForm: ChatPopupConfig = {
+  enabled: false,
+  id: "welcome-v1",
+  title: "",
+  message: "",
+  imageUrl: "",
+  imageAlt: "Imagem do aviso",
+  ctaLabel: "",
+  ctaUrl: "",
+  dismissHours: 24,
+  delayMs: 500,
+  allowMarkAsSeen: true,
+  closeOnBackdrop: true,
+  requireConversation: false,
 };
 
 export function ShortcutSettings({ token, user, notificationContent }: Props) {
@@ -96,6 +120,11 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
   const [isClearingData, setIsClearingData] = useState(false);
   const [clearFeedback, setClearFeedback] = useState("");
   const [clearError, setClearError] = useState("");
+  const [popupForm, setPopupForm] = useState<ChatPopupConfig>(emptyPopupForm);
+  const [isPopupLoading, setIsPopupLoading] = useState(true);
+  const [isPopupSaving, setIsPopupSaving] = useState(false);
+  const [popupFeedback, setPopupFeedback] = useState("");
+  const [popupError, setPopupError] = useState("");
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>(
     shouldStartWithNewShortcut ? "shortcuts" : "shortcuts",
   );
@@ -113,6 +142,11 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
       id: "access",
       label: "Acesso",
       description: "Links e codigos do cliente",
+    },
+    {
+      id: "popup",
+      label: "Popup",
+      description: "Aviso inicial do chat",
     },
     {
       id: "account",
@@ -160,6 +194,33 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
 
     return () => window.clearTimeout(timeoutId);
   }, [loadShortcuts]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getChatPopupConfig()
+      .then((config) => {
+        if (isMounted) {
+          setPopupForm(config);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setPopupError(
+            err instanceof Error ? err.message : "Falha ao carregar popup.",
+          );
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsPopupLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const openCreateModal = () => {
     setEditingShortcut(null);
@@ -451,6 +512,51 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
     }
   };
 
+  const handleSavePopup = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!token || isPopupSaving) {
+      return;
+    }
+
+    setPopupFeedback("");
+    setPopupError("");
+
+    if (
+      popupForm.enabled &&
+      !popupForm.title.trim() &&
+      !popupForm.message.trim() &&
+      !popupForm.imageUrl.trim()
+    ) {
+      setPopupError("Configure titulo, mensagem ou imagem antes de ativar.");
+      return;
+    }
+
+    setIsPopupSaving(true);
+
+    try {
+      const savedConfig = await updateChatPopupConfig(token, {
+        ...popupForm,
+        id: popupForm.id.trim() || `popup-${Date.now()}`,
+        title: popupForm.title.trim(),
+        message: popupForm.message.trim(),
+        imageUrl: popupForm.imageUrl.trim(),
+        imageAlt: popupForm.imageAlt.trim() || "Imagem do aviso",
+        ctaLabel: popupForm.ctaLabel.trim(),
+        ctaUrl: popupForm.ctaUrl.trim(),
+        dismissHours: Math.max(0, Number(popupForm.dismissHours) || 0),
+        delayMs: Math.max(0, Number(popupForm.delayMs) || 0),
+      });
+
+      setPopupForm(savedConfig);
+      setPopupFeedback("Popup salvo. Novos clientes ja recebem esta configuracao.");
+    } catch (err) {
+      setPopupError(err instanceof Error ? err.message : "Falha ao salvar popup.");
+    } finally {
+      setIsPopupSaving(false);
+    }
+  };
+
   return (
     <div className={styles.settingsView}>
       <header className={styles.settingsHeader}>
@@ -481,6 +587,242 @@ export function ShortcutSettings({ token, user, notificationContent }: Props) {
       </nav>
 
       {activeSettingsTab === "notifications" ? notificationContent : null}
+
+      {activeSettingsTab === "popup" ? (
+        <section className={styles.popupSettings}>
+          <div className={styles.clientAccessHeader}>
+            <div>
+              <span>Popup do chat</span>
+              <h2>Aviso inicial para o cliente</h2>
+              <p>
+                Configure o conteudo e por quanto tempo o aviso fica oculto
+                depois que o cliente fechar.
+              </p>
+            </div>
+          </div>
+
+          {isPopupLoading ? <p className={styles.state}>Carregando popup...</p> : null}
+
+          <form className={styles.popupForm} onSubmit={handleSavePopup}>
+            <div className={styles.formChecks}>
+              <label>
+                <input
+                  checked={popupForm.enabled}
+                  type="checkbox"
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      enabled: event.target.checked,
+                    }))
+                  }
+                />
+                Popup ativo
+              </label>
+              <label>
+                <input
+                  checked={popupForm.closeOnBackdrop}
+                  type="checkbox"
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      closeOnBackdrop: event.target.checked,
+                    }))
+                  }
+                />
+                Fechar clicando fora
+              </label>
+              <label>
+                <input
+                  checked={popupForm.allowMarkAsSeen}
+                  type="checkbox"
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      allowMarkAsSeen: event.target.checked,
+                    }))
+                  }
+                />
+                Permitir marcar como visto
+              </label>
+              <label>
+                <input
+                  checked={popupForm.requireConversation}
+                  type="checkbox"
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      requireConversation: event.target.checked,
+                    }))
+                  }
+                />
+                Mostrar so depois de iniciar conversa
+              </label>
+            </div>
+
+            <div className={styles.popupFormGrid}>
+              <label>
+                Versao do popup
+                <div className={styles.popupVersionRow}>
+                  <input
+                    value={popupForm.id}
+                    onChange={(event) =>
+                      setPopupForm((current) => ({
+                        ...current,
+                        id: event.target.value,
+                      }))
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPopupForm((current) => ({
+                        ...current,
+                        id: `popup-${Date.now()}`,
+                      }))
+                    }
+                  >
+                    Nova versao
+                  </button>
+                </div>
+                <small>
+                  Mude a versao quando quiser que clientes que marcaram como
+                  visto vejam o popup novamente.
+                </small>
+              </label>
+
+              <label>
+                Titulo
+                <input
+                  placeholder="Ex: Bem-vindo ao atendimento"
+                  value={popupForm.title}
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      title: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Mensagem
+                <textarea
+                  rows={5}
+                  placeholder="Digite o aviso que aparece quando o cliente entrar no chat."
+                  value={popupForm.message}
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      message: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                URL da imagem
+                <input
+                  placeholder="https://..."
+                  value={popupForm.imageUrl}
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      imageUrl: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Texto alternativo da imagem
+                <input
+                  value={popupForm.imageAlt}
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      imageAlt: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Texto do botao
+                <input
+                  placeholder="Ex: Saiba mais"
+                  value={popupForm.ctaLabel}
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      ctaLabel: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Link do botao
+                <input
+                  placeholder="https://..."
+                  value={popupForm.ctaUrl}
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      ctaUrl: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Reaparecer apos fechar
+                <select
+                  value={String(popupForm.dismissHours)}
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      dismissHours: Number(event.target.value),
+                    }))
+                  }
+                >
+                  <option value="0">Sempre que entrar</option>
+                  <option value="24">24 horas</option>
+                  <option value="48">2 dias</option>
+                  <option value="72">3 dias</option>
+                  <option value="168">7 dias</option>
+                  <option value="720">30 dias</option>
+                </select>
+              </label>
+
+              <label>
+                Atraso para aparecer em ms
+                <input
+                  min={0}
+                  type="number"
+                  value={popupForm.delayMs}
+                  onChange={(event) =>
+                    setPopupForm((current) => ({
+                      ...current,
+                      delayMs: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+            </div>
+
+            {popupError ? <p className={styles.clientAccessError}>{popupError}</p> : null}
+            {popupFeedback ? (
+              <p className={styles.clientAccessFeedback}>{popupFeedback}</p>
+            ) : null}
+
+            <div className={styles.popupActions}>
+              <button disabled={isPopupSaving || !token} type="submit">
+                {isPopupSaving ? "Salvando..." : "Salvar popup"}
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : null}
 
       {activeSettingsTab === "account" ? (
       <section className={styles.accountSettings}>

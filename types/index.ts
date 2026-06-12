@@ -113,6 +113,22 @@ export interface BroadcastNoticeResult {
   push_conversations: number;
 }
 
+export interface ChatPopupConfig {
+  enabled: boolean;
+  id: string;
+  title: string;
+  message: string;
+  imageUrl: string;
+  imageAlt: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  dismissHours: number;
+  delayMs: number;
+  allowMarkAsSeen: boolean;
+  closeOnBackdrop: boolean;
+  requireConversation: boolean;
+}
+
 export interface PixCharge {
   id: number;
   conversation_id: number;
