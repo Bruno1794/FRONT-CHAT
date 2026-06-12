@@ -133,7 +133,7 @@ export function ChatOpeningPopup({ isConversationStarted }: ChatOpeningPopupProp
         }
       })
       .catch(() => {
-        // Keep the environment fallback when the local popup API is unavailable.
+        // Keep the environment fallback when the popup API is unavailable.
       });
 
     return () => {
